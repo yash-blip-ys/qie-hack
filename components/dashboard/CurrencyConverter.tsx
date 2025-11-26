@@ -1,0 +1,126 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { TrendingUp, Zap } from 'lucide-react';
+
+// Mock exchange rates (in production, fetch from an oracle)
+const EXCHANGE_RATES: Record<string, number> = {
+  EUR: 0.92,
+  INR: 83.0,
+  GBP: 0.79,
+  USD: 1.0,
+  JPY: 150.0,
+};
+
+export default function CurrencyConverter() {
+  const [fromAmount, setFromAmount] = useState<string>('1');
+  const [toCurrency, setToCurrency] = useState<string>('EUR');
+  const [convertedAmount, setConvertedAmount] = useState<string>('0.92');
+  const [isPulsing, setIsPulsing] = useState(false);
+
+  useEffect(() => {
+    // Calculate conversion
+    const amount = parseFloat(fromAmount) || 0;
+    const rate = EXCHANGE_RATES[toCurrency] || 1;
+    const result = (amount * rate).toFixed(2);
+    setConvertedAmount(result);
+
+    // Pulse animation when rate updates
+    setIsPulsing(true);
+    const timer = setTimeout(() => setIsPulsing(false), 500);
+    return () => clearTimeout(timer);
+  }, [fromAmount, toCurrency]);
+
+  const currentRate = EXCHANGE_RATES[toCurrency] || 1;
+
+  return (
+    <div className="backdrop-blur-sm bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+          <TrendingUp className="w-5 h-5 text-white" />
+        </div>
+        <h3 className="text-lg font-semibold">Currency Converter</h3>
+      </div>
+
+      <div className="space-y-4">
+        {/* Live Rate Badge */}
+        <div className={`flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-lg transition-all ${
+          isPulsing ? 'animate-pulse' : ''
+        }`}>
+          <Zap className="w-4 h-4 text-green-400" />
+          <span className="text-xs font-medium text-green-400">
+            Live Rate: 1 QUSD = {currentRate.toFixed(2)} {toCurrency}
+          </span>
+        </div>
+
+        {/* From Input */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-2">From</label>
+          <div className="relative">
+            <input
+              type="number"
+              value={fromAmount}
+              onChange={(e) => setFromAmount(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white pr-20"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <span className="text-slate-400 font-medium">QUSD</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Arrow */}
+        <div className="flex items-center justify-center">
+          <div className="w-8 h-8 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center">
+            <svg
+              className="w-4 h-4 text-cyan-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* To Input */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-2">To</label>
+          <div className="relative">
+            <input
+              type="text"
+              value={convertedAmount}
+              readOnly
+              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg text-white pr-24"
+            />
+            <select
+              value={toCurrency}
+              onChange={(e) => setToCurrency(e.target.value)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            >
+              <option value="EUR">EUR</option>
+              <option value="INR">INR</option>
+              <option value="GBP">GBP</option>
+              <option value="USD">USD</option>
+              <option value="JPY">JPY</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Info Note */}
+        <div className="mt-4 pt-4 border-t border-slate-700">
+          <p className="text-xs text-slate-500">
+            Rates are updated in real-time. For actual conversion, use the cross-border transfer feature.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+

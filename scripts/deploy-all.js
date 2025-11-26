@@ -1,0 +1,83 @@
+import hre from "hardhat";
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: resolve(__dirname, "../.env.local") });
+
+async function main() {
+  console.log("\n🚀 Starting full deployment process...\n");
+  
+  const [deployer] = await hre.ethers.getSigners();
+  console.log("Deployer address:", deployer.address);
+  
+  const balance = await hre.ethers.provider.getBalance(deployer.address);
+  console.log("Account balance:", hre.ethers.formatEther(balance), "QIE\n");
+  
+  if (balance === 0n) {
+    throw new Error("Insufficient balance. Please fund your deployer account.");
+  }
+
+  // Step 1: Deploy QUSD
+  console.log("=".repeat(50));
+  console.log("Step 1: Deploying QUSD");
+  console.log("=".repeat(50));
+  
+  const QUSD = await hre.ethers.getContractFactory("QUSD");
+  const qusd = await QUSD.deploy(deployer.address);
+  await qusd.waitForDeployment();
+  const qusdAddress = await qusd.getAddress();
+  
+  console.log("✅ QUSD deployed to:", qusdAddress);
+  
+  // Step 2: Deploy Treasury
+  console.log("\n" + "=".repeat(50));
+  console.log("Step 2: Deploying QieTreasury");
+  console.log("=".repeat(50));
+  
+  const QieTreasury = await hre.ethers.getContractFactory("QieTreasury");
+  const treasury = await QieTreasury.deploy(qusdAddress, deployer.address);
+  await treasury.waitForDeployment();
+  const treasuryAddress = await treasury.getAddress();
+  
+  console.log("✅ QieTreasury deployed to:", treasuryAddress);
+  
+  // Step 3: Transfer QUSD ownership
+  console.log("\n" + "=".repeat(50));
+  console.log("Step 3: Transferring QUSD ownership to Treasury");
+  console.log("=".repeat(50));
+  
+  const tx = await qusd.transferOwnership(treasuryAddress);
+  console.log("   Transaction hash:", tx.hash);
+  await tx.wait();
+  console.log("✅ Ownership transferred!");
+  
+  // Verify
+  const newOwner = await qusd.owner();
+  console.log("   QUSD owner:", newOwner);
+  
+  // Summary
+  console.log("\n" + "=".repeat(50));
+  console.log("📋 Deployment Summary");
+  console.log("=".repeat(50));
+  console.log("QUSD Contract:", qusdAddress);
+  console.log("Treasury Contract:", treasuryAddress);
+  console.log("\n📝 Add these to your .env.local file:");
+  console.log(`NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS=${qusdAddress}`);
+  console.log(`NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS=${treasuryAddress}`);
+  console.log("\n✅ All contracts deployed successfully!");
+}
+
+main()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("\n❌ Deployment failed:");
+    console.error(error);
+    process.exit(1);
+  });
+

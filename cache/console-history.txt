@@ -1,0 +1,2 @@
+await ethers.provider.getBlockNumber()
+const accounts = await ethers.getSigners();
