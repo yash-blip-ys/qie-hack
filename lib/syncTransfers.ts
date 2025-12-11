@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import connectDB from './db';
 import TransferEvent from '../models/TransferEvent';
 import { TREASURY_ABI } from './web3';
+import { getRpcUrl, getChainId } from '@/config';
 
 interface SyncOptions {
   fromBlock?: number;
@@ -11,7 +12,7 @@ interface SyncOptions {
 
 const TREASURY_ADDRESS =
   process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS || process.env.TREASURY_CONTRACT_ADDRESS;
-const RPC_URL = process.env.QIE_RPC_URL || process.env.NEXT_PUBLIC_QIE_RPC_URL;
+const RPC_URL = getRpcUrl();
 const START_BLOCK = process.env.CROSS_BORDER_START_BLOCK
   ? parseInt(process.env.CROSS_BORDER_START_BLOCK, 10)
   : undefined;
@@ -19,7 +20,7 @@ const START_BLOCK = process.env.CROSS_BORDER_START_BLOCK
 function getProvider(existing?: ethers.JsonRpcProvider) {
   if (existing) return existing;
   if (!RPC_URL) {
-    throw new Error('QIE_RPC_URL is not configured. Please set it in your environment.');
+    throw new Error('QIE RPC URL is not configured. Please set it via config.json or .env.');
   }
   return new ethers.JsonRpcProvider(RPC_URL);
 }
@@ -71,7 +72,7 @@ export async function syncTreasuryEvents(options: SyncOptions = {}) {
   };
 
   const operations = [];
-  const chainId = Number(process.env.QIE_CHAIN_ID || 1938);
+  const chainId = getChainId();
 
   for (const event of crossBorderEvents) {
     if (!event.args) continue;

@@ -1,16 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { useWeb3 } from '@/contexts/Web3Provider';
 import { formatAddress, formatBalance, parseAmount, getContract, QUSD_ABI, TREASURY_ABI } from '@/lib/web3';
-import { Wallet, CheckCircle, ArrowRightLeft, Send, LogOut, QrCode } from 'lucide-react';
+import { Wallet, CheckCircle, ArrowRightLeft, Send, LogOut, QrCode, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { ethers } from 'ethers';
+import AnomalyBadge from '@/components/dashboard/AnomalyBadge';
+import { reportAnomalyEvent, subscribeToAnomalyUpdates, getLastAnomalyResult, AnomalyResult } from '@/lib/anomaly';
 import PrivacySettings from '@/components/dashboard/PrivacySettings';
 import ReceiveModal from '@/components/dashboard/ReceiveModal';
 import TransactionHistory from '@/components/dashboard/TransactionHistory';
 import CurrencyConverter from '@/components/dashboard/CurrencyConverter';
+
+type DetectionPayload = {
+  wallet: string;
+  action: 'swap' | 'send';
+  amount: number;
+  currency: string;
+  txHash: string;
+  targetCurrency?: string | null;
+  recipient?: string | null;
+};
 
 const QUSD_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS || '';
 const TREASURY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS || '';
@@ -31,6 +44,9 @@ export default function DashboardPage() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [targetCurrency, setTargetCurrency] = useState('USD');
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [lastAnomaly, setLastAnomaly] = useState<AnomalyResult | null>(null);
+  const [isDetectingAnomaly, setIsDetectingAnomaly] = useState(false);
+  const detectionQueue = useRef(0);
 
   useEffect(() => {
     if (!isConnected) {
@@ -39,9 +55,23 @@ export default function DashboardPage() {
     }
     loadBalances();
     loadKYCStatus();
-  }, [isConnected, account]);
+  }, [isConnected, router, loadBalances, loadKYCStatus]);
 
-  const loadBalances = async () => {
+  useEffect(() => {
+    const stored = getLastAnomalyResult();
+    if (stored) {
+      setLastAnomaly(stored);
+    }
+    const unsubscribe = subscribeToAnomalyUpdates(() => {
+      const latest = getLastAnomalyResult();
+      if (latest) {
+        setLastAnomaly(latest);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const loadBalances = useCallback(async () => {
     if (!provider || !account) return;
 
     try {
@@ -58,9 +88,9 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error('Error loading balances:', error);
     }
-  };
+  }, [provider, account, signer]);
 
-  const loadKYCStatus = async () => {
+  const loadKYCStatus = useCallback(async () => {
     if (!account) return;
 
     try {
@@ -72,6 +102,34 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error loading KYC status:', error);
+    }
+  }, [account]);
+
+  const startAnomalyRun = () => {
+    detectionQueue.current += 1;
+    setIsDetectingAnomaly(true);
+  };
+
+  const finishAnomalyRun = () => {
+    detectionQueue.current = Math.max(0, detectionQueue.current - 1);
+    setIsDetectingAnomaly(detectionQueue.current > 0);
+  };
+
+  const triggerAnomalyCheck = async (payload: DetectionPayload) => {
+    if (!payload.wallet || !payload.txHash) return;
+    startAnomalyRun();
+    try {
+      const result = await reportAnomalyEvent(payload);
+      setLastAnomaly(result);
+      if (result.verdict === 'ANOMALY') {
+        toast.error('Risk engine flagged this transaction as high risk. Inspect the reasons below.');
+      } else if (result.verdict === 'SUSPICIOUS') {
+        toast.warning('Risk engine marked this as suspicious. Please review before proceeding.');
+      }
+    } catch (error) {
+      console.error('Anomaly check failed', error);
+    } finally {
+      finishAnomalyRun();
     }
   };
 
@@ -122,7 +180,8 @@ export default function DashboardPage() {
       return;
     }
 
-    if (!swapAmount || parseFloat(swapAmount) <= 0) {
+    const numericSwapAmount = parseFloat(swapAmount);
+    if (!swapAmount || numericSwapAmount <= 0) {
       toast.error('Please enter a valid amount');
       return;
     }
@@ -146,6 +205,13 @@ export default function DashboardPage() {
       toast.success('Successfully swapped QIE for QUSD!', { id: 'swap' });
       setSwapAmount('');
       await loadBalances();
+      void triggerAnomalyCheck({
+        wallet: account,
+        action: 'swap',
+        amount: numericSwapAmount,
+        currency: 'QIE',
+        txHash: tx.hash,
+      });
     } catch (error: any) {
       console.error('Error swapping:', error);
       toast.error(error.message || 'Failed to swap tokens', { id: 'swap' });
@@ -165,7 +231,8 @@ export default function DashboardPage() {
       return;
     }
 
-    if (!sendAmount || parseFloat(sendAmount) <= 0) {
+    const numericSendAmount = parseFloat(sendAmount);
+    if (!sendAmount || numericSendAmount <= 0) {
       toast.error('Please enter a valid amount');
       return;
     }
@@ -196,6 +263,15 @@ export default function DashboardPage() {
       setSendAmount('');
       setRecipientAddress('');
       await loadBalances();
+      void triggerAnomalyCheck({
+        wallet: account,
+        action: 'send',
+        amount: numericSendAmount,
+        currency: 'QUSD',
+        txHash: tx.hash,
+        targetCurrency,
+        recipient: recipientAddress,
+      });
     } catch (error: any) {
       console.error('Error sending:', error);
       toast.error(error.message || 'Failed to send transfer', { id: 'send' });
@@ -227,6 +303,12 @@ export default function DashboardPage() {
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="text-sm font-mono">{formatAddress(account || '')}</span>
               </div>
+              <Link
+                href="/dashboard/admin"
+                className="px-3 py-1 border border-slate-700 rounded-lg text-sm text-slate-300 hover:border-cyan-400 transition-colors"
+              >
+                Admin Alerts
+              </Link>
               <button
                 onClick={disconnectWallet}
                 className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
@@ -382,6 +464,56 @@ export default function DashboardPage() {
             >
               {isLoadingSend ? 'Processing...' : 'Execute Transfer'}
             </button>
+          </div>
+        </div>
+
+        {/* Risk Monitor */}
+        <div className="backdrop-blur-sm bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-semibold">Real-time Risk Monitor</p>
+              <p className="text-sm text-slate-400">
+                {isDetectingAnomaly
+                  ? 'Analyzing the latest transaction...'
+                  : lastAnomaly
+                  ? `Last verdict: ${lastAnomaly.verdict}`
+                  : 'Submit a swap or transfer to trigger the risk engine.'}
+              </p>
+            </div>
+            {lastAnomaly ? (
+              <AnomalyBadge verdict={lastAnomaly.verdict} showScore={lastAnomaly.score} />
+            ) : (
+              <span className="text-xs uppercase text-slate-500">idle</span>
+            )}
+          </div>
+          <div className="mt-4">
+            {isDetectingAnomaly ? (
+              <div className="flex items-center gap-2 text-sm text-slate-300">
+                <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
+                Processing anomaly signals...
+              </div>
+            ) : lastAnomaly ? (
+              <p className="text-sm text-slate-400">
+                {lastAnomaly.verdict === 'ANOMALY'
+                  ? 'Confirmed risky behavior. Review the reasons below before proceeding.'
+                  : 'Suspicious activity detected. Proceed with caution.'}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-400">No anomalies traced yet.</p>
+            )}
+
+            {lastAnomaly?.reasons?.length ? (
+              <ul className="mt-3 grid gap-2 text-xs text-slate-300">
+                {lastAnomaly.reasons.map((reason, index) => (
+                  <li
+                    key={`${reason}-${index}`}
+                    className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-1"
+                  >
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </div>
 

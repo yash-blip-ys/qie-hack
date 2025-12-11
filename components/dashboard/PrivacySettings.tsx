@@ -176,7 +176,7 @@ export default function PrivacySettings() {
                 <p>
                   <strong className="text-slate-400">On-Chain Data:</strong> Transaction hashes and 
                   value transfers are stored on the immutable Qie blockchain and cannot be deleted 
-                  (exempt under 'legitimate interest').
+                  (exempt under &lsquo;legitimate interest&rsquo;).
                 </p>
                 <p className="mt-2">
                   <strong className="text-slate-400">Off-Chain Data:</strong> Personal identifiers 
