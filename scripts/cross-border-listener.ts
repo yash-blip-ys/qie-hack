@@ -1,13 +1,19 @@
 import 'dotenv/config';
 import { ethers } from 'ethers';
-import connectDB from '../lib/db';
+import connectDB, {
+  enqueueTransferEvent,
+  dequeueTransferEvent,
+  getRedisClient,
+  RedisQueuePayload,
+} from '../lib/db';
 import TransferEvent from '../models/TransferEvent';
 import { TREASURY_ABI } from '../lib/web3';
 import { syncTreasuryEvents } from '../lib/syncTransfers';
+import { getRpcUrl, getWsRpcUrl, getChainId } from '@/config';
 
 async function bootstrapProvider() {
-  const wsUrl = process.env.QIE_WS_RPC_URL;
-  const httpUrl = process.env.QIE_RPC_URL || process.env.NEXT_PUBLIC_QIE_RPC_URL;
+  const wsUrl = getWsRpcUrl();
+  const httpUrl = getRpcUrl();
 
   if (wsUrl) {
     console.log('🔌 Using WebSocket provider for real-time events');
@@ -30,25 +36,22 @@ async function persistCrossBorder(
   timestamp: bigint,
   log: ethers.EventLog
 ) {
-  await TransferEvent.updateOne(
-    { txHash: log.transactionHash },
-    {
-      $set: {
-        sender: sender.toLowerCase(),
-        recipient: recipient.toLowerCase(),
-        amountQUSD: ethers.formatEther(amountQUSD),
-        targetCurrency,
-        blockNumber: log.blockNumber,
-        timestamp: Number(timestamp),
-        chainId: Number(process.env.QIE_CHAIN_ID || 1938),
-        type: 'cross-border',
-        status: 'pending',
-      },
-    },
-    { upsert: true }
-  );
+  const payload: RedisQueuePayload = {
+    txHash: log.transactionHash,
+    type: 'cross-border',
+    sender: sender.toLowerCase(),
+    recipient: recipient.toLowerCase(),
+    amountQUSD: ethers.formatEther(amountQUSD),
+    targetCurrency,
+    blockNumber: log.blockNumber,
+    timestamp: Number(timestamp) || Math.floor(Date.now() / 1000),
+    chainId: getChainId(),
+    metadata: {},
+  };
+
+  await enqueueTransferEvent(payload);
   console.log(
-    `📬 Cross-border request stored: ${sender} -> ${recipient} | ${ethers.formatEther(amountQUSD)} QUSD`
+    `📬 Cross-border request queued: ${sender} -> ${recipient} | ${ethers.formatEther(amountQUSD)} QUSD`
   );
 }
 
@@ -64,27 +67,67 @@ async function persistSwap(
     const block = await provider.getBlock(log.blockNumber);
     timestamp = block?.timestamp ?? timestamp;
   }
+  const payload: RedisQueuePayload = {
+    txHash: log.transactionHash,
+    type: 'swap',
+    sender: depositor.toLowerCase(),
+    recipient: null,
+    amountQUSD: ethers.formatEther(amountQUSD),
+    targetCurrency: null,
+    blockNumber: log.blockNumber,
+    timestamp,
+    chainId: getChainId(),
+    metadata: {
+      amountQIE: ethers.formatEther(amountQIE),
+    },
+  };
+
+  await enqueueTransferEvent(payload);
+  console.log(`💱 Swap queued: ${depositor} swapped ${ethers.formatEther(amountQIE)} QIE`);
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function persistQueuedEvent(payload: RedisQueuePayload) {
+  await connectDB();
+  const status = payload.type === 'swap' ? 'completed' : 'pending';
   await TransferEvent.updateOne(
-    { txHash: log.transactionHash },
+    { txHash: payload.txHash },
     {
       $set: {
-        sender: depositor.toLowerCase(),
-        recipient: null,
-        amountQUSD: ethers.formatEther(amountQUSD),
-        targetCurrency: null,
-        blockNumber: log.blockNumber,
-        timestamp,
-        chainId: Number(process.env.QIE_CHAIN_ID || 1938),
-        type: 'swap',
-        status: 'completed',
-        metadata: {
-          amountQIE: ethers.formatEther(amountQIE),
-        },
+        sender: payload.sender,
+        recipient: payload.recipient,
+        amountQUSD: payload.amountQUSD,
+        targetCurrency: payload.targetCurrency,
+        blockNumber: payload.blockNumber,
+        timestamp: payload.timestamp,
+        chainId: payload.chainId,
+        type: payload.type,
+        status,
+        metadata: payload.metadata,
       },
     },
     { upsert: true }
   );
-  console.log(`💱 Swap stored: ${depositor} swapped ${ethers.formatEther(amountQIE)} QIE`);
+  console.log(`🧾 Queue processed: ${payload.type} @ ${payload.txHash}`);
+}
+
+async function startQueueProcessor() {
+  console.log('▶️ Starting Redis queue processor');
+  while (true) {
+    try {
+      const payload = await dequeueTransferEvent(5);
+      if (!payload) {
+        continue;
+      }
+      await persistQueuedEvent(payload);
+    } catch (error: any) {
+      console.error('Queue processor error:', error);
+      await wait(2000);
+    }
+  }
 }
 
 async function main() {
@@ -103,6 +146,8 @@ async function main() {
   await syncTreasuryEvents({ provider: provider });
   console.log('✅ Historical sync complete. Listening for new events...\n');
 
+  void startQueueProcessor();
+
   contract.on(
     'CrossBorderFulfillmentRequested',
     async (sender, recipient, amountQUSD, targetCurrency, timestamp, event) => {
@@ -114,9 +159,11 @@ async function main() {
     await persistSwap(depositor, amountQIE, amountQUSD, event);
   });
 
+  const redisClient = getRedisClient();
   process.on('SIGINT', async () => {
     console.log('\n👋 Shutting down listener...');
     provider.destroy?.();
+    redisClient.disconnect();
     process.exit(0);
   });
 }

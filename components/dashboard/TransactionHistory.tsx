@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowUp, ArrowDown, ArrowRightLeft, ExternalLink, Loader2, RefreshCcw } from 'lucide-react';
 import { useWeb3 } from '@/contexts/Web3Provider';
 import { toast } from 'react-hot-toast';
+import { getExplorerUrl } from '@/config';
+import AnomalyBadge from '@/components/dashboard/AnomalyBadge';
+import { getAnomalyStore, subscribeToAnomalyUpdates } from '@/lib/anomaly';
 
 const PAGE_SIZE = 6;
 
@@ -27,6 +30,7 @@ export default function TransactionHistory() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [anomalyMap, setAnomalyMap] = useState(() => getAnomalyStore());
 
   useEffect(() => {
     if (!account) {
@@ -34,41 +38,50 @@ export default function TransactionHistory() {
       return;
     }
     fetchTransactions(1, false);
-  }, [account]);
+  }, [account, fetchTransactions]);
 
-  const fetchTransactions = async (pageToLoad: number, append: boolean) => {
-    if (!account) return;
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams({
-        address: account,
-        page: pageToLoad.toString(),
-        limit: PAGE_SIZE.toString(),
-      });
-      const response = await fetch(`/api/transfers?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to load transactions');
+  useEffect(() => {
+    const refresh = () => setAnomalyMap(getAnomalyStore());
+    const unsubscribe = subscribeToAnomalyUpdates(refresh);
+    return () => unsubscribe();
+  }, []);
+
+  const fetchTransactions = useCallback(
+    async (pageToLoad: number, append: boolean) => {
+      if (!account) return;
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          address: account,
+          page: pageToLoad.toString(),
+          limit: PAGE_SIZE.toString(),
+        });
+        const response = await fetch(`/api/transfers?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error('Failed to load transactions');
+        }
+        const payload = await response.json();
+        const newData: Transfer[] = payload.data.map((item: any) => ({
+          txHash: item.txHash,
+          type: item.type,
+          amountQUSD: item.amountQUSD,
+          timestamp: item.timestamp,
+          status: item.status,
+          targetCurrency: item.targetCurrency,
+          recipient: item.recipient,
+        }));
+        setTransactions((prev) => (append ? [...prev, ...newData] : newData));
+        setHasMore(pageToLoad < payload.pagination.pages);
+        setPage(pageToLoad);
+      } catch (error: any) {
+        console.error('Error loading transactions:', error);
+        toast.error(error.message || 'Unable to load history');
+      } finally {
+        setIsLoading(false);
       }
-      const payload = await response.json();
-      const newData: Transfer[] = payload.data.map((item: any) => ({
-        txHash: item.txHash,
-        type: item.type,
-        amountQUSD: item.amountQUSD,
-        timestamp: item.timestamp,
-        status: item.status,
-        targetCurrency: item.targetCurrency,
-        recipient: item.recipient,
-      }));
-      setTransactions((prev) => (append ? [...prev, ...newData] : newData));
-      setHasMore(pageToLoad < payload.pagination.pages);
-      setPage(pageToLoad);
-    } catch (error: any) {
-      console.error('Error loading transactions:', error);
-      toast.error(error.message || 'Unable to load history');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [account]
+  );
 
   const handleLoadMore = () => {
     if (!hasMore || isLoading) return;
@@ -118,8 +131,9 @@ export default function TransactionHistory() {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const explorerBase = getExplorerUrl();
   const getExplorerLink = (txHash: string) => {
-    return `https://explorer.qie.org/tx/${txHash}`;
+    return `${explorerBase.replace(/\/$/, '')}/tx/${txHash}`;
   };
 
   const statusBadge = (status: TransferStatus) => {
@@ -163,54 +177,65 @@ export default function TransactionHistory() {
         </div>
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {transactions.map((tx, index) => (
-            <div
-              key={`${tx.txHash}-${index}`}
-              className="flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg hover:bg-slate-800 transition-colors"
-            >
-              <div className="flex-shrink-0">
-                {getTransactionIcon(tx.type)}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-medium text-white flex items-center gap-2">
-                    {getTransactionLabel(tx)}
-                    {statusBadge(tx.status)}
-                  </p>
-                  <p
-                    className={`font-semibold ${
-                      tx.type === 'swap' ? 'text-cyan-400' : 'text-red-400'
-                    }`}
-                  >
-                    {tx.type === 'swap' ? '+' : '-'}
-                    {tx.amountQUSD} QUSD
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>{formatDate(tx.timestamp)}</span>
-                  {tx.recipient && (
-                    <>
-                      <span>•</span>
-                      <span className="font-mono">
-                        {tx.recipient.slice(0, 6)}...{tx.recipient.slice(-4)}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <a
-                href={getExplorerLink(tx.txHash)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                title="View on Explorer"
+          {transactions.map((tx, index) => {
+            const anomalyEntry = anomalyMap[tx.txHash];
+            return (
+              <div
+                key={`${tx.txHash}-${index}`}
+                className="flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg hover:bg-slate-800 transition-colors"
               >
-                <ExternalLink className="w-4 h-4 text-slate-400" />
-              </a>
-            </div>
-          ))}
+                <div className="flex-shrink-0">
+                  {getTransactionIcon(tx.type)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-medium text-white flex items-center gap-2">
+                      {getTransactionLabel(tx)}
+                      {statusBadge(tx.status)}
+                      {anomalyEntry && (
+                        <span className="flex items-center">
+                          <AnomalyBadge
+                            verdict={anomalyEntry.verdict}
+                            size="sm"
+                            showScore={anomalyEntry.score}
+                          />
+                        </span>
+                      )}
+                    </p>
+                    <p
+                      className={`font-semibold ${
+                        tx.type === 'swap' ? 'text-cyan-400' : 'text-red-400'
+                      }`}
+                    >
+                      {tx.type === 'swap' ? '+' : '-'}
+                      {tx.amountQUSD} QUSD
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span>{formatDate(tx.timestamp)}</span>
+                    {tx.recipient && (
+                      <>
+                        <span>•</span>
+                        <span className="font-mono">
+                          {tx.recipient.slice(0, 6)}...{tx.recipient.slice(-4)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <a
+                  href={getExplorerLink(tx.txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  title="View on Explorer"
+                >
+                  <ExternalLink className="w-4 h-4 text-slate-400" />
+                </a>
+              </div>
+            );
+          })}
           {hasMore && (
             <button
               onClick={handleLoadMore}

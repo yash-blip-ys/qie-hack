@@ -1,0 +1,27 @@
+{
+  "defaultNetwork": "qieTestnet",
+  "networks": {
+    "qieTestnet": {
+      "label": "QIE Testnet",
+      "rpcUrl": "https://rpc-main1.qie.org",
+      "wsRpcUrl": "wss://rpc-main1.qie.org/ws",
+      "explorer": "https://explorer.qie.org",
+      "chainId": 1938,
+      "gasLimit": 1000000,
+      "qiedexPair": "0x0000000000000000000000000000000000000000",
+      "oracleDecimals": 18,
+      "notes": "Default QIE public testnet"
+    },
+    "local": {
+      "label": "Local Hardhat",
+      "rpcUrl": "http://127.0.0.1:8545",
+      "wsRpcUrl": "",
+      "explorer": "http://localhost:4000",
+      "chainId": 1337,
+      "gasLimit": 10000000,
+      "qiedexPair": "0x0000000000000000000000000000000000000000",
+      "oracleDecimals": 18,
+      "notes": "Local testing network"
+    }
+  }
+}
