@@ -4,6 +4,7 @@ import "./globals.css";
 import { Web3Provider } from "@/contexts/Web3Provider";
 import { Toaster } from "react-hot-toast";
 import ConsentBanner from "@/components/compliance/ConsentBanner";
+import Chatbot from "./dashboard/chatbot/chatbot";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Web3Provider>
           {children}
+          <Chatbot />
           <ConsentBanner />
           <Toaster position="top-right" />
         </Web3Provider>
