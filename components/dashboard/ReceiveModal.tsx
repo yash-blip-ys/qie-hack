@@ -41,21 +41,21 @@ export default function ReceiveModal({ isOpen, onClose }: ReceiveModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="backdrop-blur-lg bg-slate-900/95 border border-slate-700/50 rounded-2xl p-8 max-w-md w-full shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full shadow-2xl relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
           aria-label="Close"
         >
-          <X className="w-5 h-5 text-slate-400" />
+          <X className="w-5 h-5" />
         </button>
 
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold mb-2 text-gray-900">
             Receive Funds
           </h2>
-          <p className="text-slate-400 text-sm">
+          <p className="text-gray-600 text-sm">
             Share this address to receive QIE or QUSD
           </p>
         </div>
@@ -76,14 +76,14 @@ export default function ReceiveModal({ isOpen, onClose }: ReceiveModalProps) {
         </div>
 
         <div className="space-y-4">
-          <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
-            <p className="text-xs text-slate-500 mb-2">Your Wallet Address</p>
-            <p className="font-mono text-sm text-white break-all">{account}</p>
+          <div className="p-4 bg-gray-50 border-2 border-gray-200 rounded-xl">
+            <p className="text-xs text-gray-500 mb-2 font-semibold">Your Wallet Address</p>
+            <p className="font-mono text-sm text-gray-900 break-all">{account}</p>
           </div>
 
           <button
             onClick={handleCopy}
-            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+            className="w-full px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
           >
             {copied ? (
               <>

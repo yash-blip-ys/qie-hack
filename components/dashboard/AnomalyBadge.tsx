@@ -9,9 +9,9 @@ interface Props {
 }
 
 const verdictStyles: Record<AnomalyVerdict, { label: string; colors: string }> = {
-  CLEAR: { label: 'Clear', colors: 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' },
-  SUSPICIOUS: { label: 'Suspicious', colors: 'bg-amber-500/10 text-amber-300 border border-amber-500/30' },
-  ANOMALY: { label: 'Anomaly', colors: 'bg-red-500/10 text-red-300 border border-red-500/30' },
+  CLEAR: { label: 'Clear', colors: 'bg-green-50 text-green-700 border border-green-200' },
+  SUSPICIOUS: { label: 'Suspicious', colors: 'bg-yellow-50 text-yellow-700 border border-yellow-200' },
+  ANOMALY: { label: 'Anomaly', colors: 'bg-red-50 text-red-700 border border-red-200' },
 };
 
 export default function AnomalyBadge({ verdict, size = 'md', showScore }: Props) {

@@ -88,17 +88,17 @@ export default function AdminAlertsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
+    <div className="min-h-screen bg-gray-50">
+      <div className="border-b border-gray-200 bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-slate-400">Admin Console</p>
-            <h1 className="text-2xl font-bold">Anomaly Alerts</h1>
+            <p className="text-sm text-gray-500 uppercase tracking-wide">Admin Console</p>
+            <h1 className="text-2xl font-bold text-gray-900">Anomaly Alerts</h1>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="px-3 py-1 border border-slate-700 rounded-lg text-sm text-slate-300 hover:border-cyan-400 transition-colors flex items-center gap-1"
+              className="px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center gap-1 font-semibold"
             >
               <LinkIcon className="w-4 h-4" />
               Back to Dashboard
@@ -106,7 +106,7 @@ export default function AdminAlertsPage() {
             <button
               onClick={handlePingWebhook}
               disabled={isPingingWebhook}
-              className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+              className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-60"
             >
               {isPingingWebhook ? 'Pinging...' : 'Ping Webhook'}
             </button>
@@ -116,34 +116,34 @@ export default function AdminAlertsPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="grid gap-5 md:grid-cols-3">
-          <div className="backdrop-blur-sm bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-2">
-            <p className="text-sm text-slate-400">Latest Webhook</p>
-            <p className="text-lg font-semibold">
+          <div className="card-elevated rounded-2xl p-5 border border-gray-200 bg-white space-y-2">
+            <p className="text-sm text-gray-500 uppercase tracking-wide font-semibold">Latest Webhook</p>
+            <p className="text-lg font-bold text-gray-900">
               {webhookStatus?.enabled ? 'Connected' : 'Not configured'}
             </p>
-            <p className="text-xs text-slate-500">{webhookStatus?.webhook || 'No webhook provided'}</p>
+            <p className="text-xs text-gray-500">{webhookStatus?.webhook || 'No webhook provided'}</p>
           </div>
-          <div className="backdrop-blur-sm bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-2">
-            <p className="text-sm text-slate-400">Alerts cached</p>
-            <p className="text-lg font-semibold">{alerts.length}</p>
-            <p className="text-xs text-slate-500">Updated every 15s</p>
+          <div className="card-elevated rounded-2xl p-5 border border-gray-200 bg-white space-y-2">
+            <p className="text-sm text-gray-500 uppercase tracking-wide font-semibold">Alerts cached</p>
+            <p className="text-lg font-bold text-gray-900">{alerts.length}</p>
+            <p className="text-xs text-gray-500">Updated every 15s</p>
           </div>
-          <div className="backdrop-blur-sm bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-2">
-            <p className="text-sm text-slate-400">Health</p>
-            <p className="text-lg font-semibold">{loading ? 'Refreshing…' : 'Idle'}</p>
-            <p className="text-xs text-slate-500">{loading ? 'Fetching alerts' : 'Queue is healthy'}</p>
+          <div className="card-elevated rounded-2xl p-5 border border-gray-200 bg-white space-y-2">
+            <p className="text-sm text-gray-500 uppercase tracking-wide font-semibold">Health</p>
+            <p className="text-lg font-bold text-gray-900">{loading ? 'Refreshing…' : 'Idle'}</p>
+            <p className="text-xs text-gray-500">{loading ? 'Fetching alerts' : 'Queue is healthy'}</p>
           </div>
         </div>
 
-        <section className="backdrop-blur-sm bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <section className="card-elevated rounded-2xl p-5 border border-gray-200 bg-white space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Recent Detection Events</h2>
-              <p className="text-sm text-slate-400">Powered by the anomaly middleware queue</p>
+              <h2 className="text-lg font-bold text-gray-900">Recent Detection Events</h2>
+              <p className="text-sm text-gray-600">Powered by the anomaly middleware queue</p>
             </div>
             {loading && (
-              <div className="flex items-center gap-2 text-sm text-slate-300">
-                <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />
                 Refreshing
               </div>
             )}
@@ -151,33 +151,33 @@ export default function AdminAlertsPage() {
 
           <div className="space-y-3">
             {alerts.length === 0 ? (
-              <p className="text-sm text-slate-500">No alerts yet. Trigger a transfer or swap to start logging.</p>
+              <p className="text-sm text-gray-500">No alerts yet. Trigger a transfer or swap to start logging.</p>
             ) : (
               alerts.map((alert) => (
                 <div
                   key={alert._id}
-                  className="flex flex-col gap-2 rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4 shadow-inner"
+                  className="flex flex-col gap-2 rounded-xl border-2 border-gray-200 bg-gray-50 p-4 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-gray-600">
                         {alert.event.action === 'swap' ? 'Swap' : 'Transfer'} · {formatAddress(alert.event.wallet)}
                       </p>
-                      <p className="text-base font-semibold">
+                      <p className="text-base font-bold text-gray-900">
                         {alert.event.amount ? `${alert.event.amount} QUSD` : 'Unknown amount'}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <AnomalyBadge verdict={alert.verdict} size="sm" showScore={alert.score} />
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-gray-500">
                         {alert.createdAt ? new Date(alert.createdAt).toLocaleString() : '—'}
                       </span>
                     </div>
                   </div>
                   {alert.reasons?.length ? (
-                    <div className="grid gap-2 text-xs text-slate-300">
+                    <div className="grid gap-2 text-xs">
                       {alert.reasons.map((reason) => (
-                        <span key={reason} className="rounded-lg border border-slate-700/50 bg-slate-900/70 px-3 py-1">
+                        <span key={reason} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700">
                           {reason}
                         </span>
                       ))}

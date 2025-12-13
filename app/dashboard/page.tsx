@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/contexts/Web3Provider';
 import { formatAddress, formatBalance, parseAmount, getContract, QUSD_ABI, TREASURY_ABI } from '@/lib/web3';
-import { Wallet, CheckCircle, ArrowRightLeft, Send, LogOut, QrCode, Loader2 } from 'lucide-react';
+import { Wallet, CheckCircle, ArrowRightLeft, Send, LogOut, QrCode, Loader2, Shield } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { ethers } from 'ethers';
@@ -48,29 +48,6 @@ export default function DashboardPage() {
   const [isDetectingAnomaly, setIsDetectingAnomaly] = useState(false);
   const detectionQueue = useRef(0);
 
-  useEffect(() => {
-    if (!isConnected) {
-      router.push('/');
-      return;
-    }
-    loadBalances();
-    loadKYCStatus();
-  }, [isConnected, router, loadBalances, loadKYCStatus]);
-
-  useEffect(() => {
-    const stored = getLastAnomalyResult();
-    if (stored) {
-      setLastAnomaly(stored);
-    }
-    const unsubscribe = subscribeToAnomalyUpdates(() => {
-      const latest = getLastAnomalyResult();
-      if (latest) {
-        setLastAnomaly(latest);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
   const loadBalances = useCallback(async () => {
     if (!provider || !account) return;
 
@@ -104,6 +81,29 @@ export default function DashboardPage() {
       console.error('Error loading KYC status:', error);
     }
   }, [account]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      router.push('/');
+      return;
+    }
+    loadBalances();
+    loadKYCStatus();
+  }, [isConnected, router, loadBalances, loadKYCStatus]);
+
+  useEffect(() => {
+    const stored = getLastAnomalyResult();
+    if (stored) {
+      setLastAnomaly(stored);
+    }
+    const unsubscribe = subscribeToAnomalyUpdates(() => {
+      const latest = getLastAnomalyResult();
+      if (latest) {
+        setLastAnomaly(latest);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const startAnomalyRun = () => {
     detectionQueue.current += 1;
@@ -285,33 +285,36 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
+      <header className="border-b border-gray-200 bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 bg-gray-900 rounded-xl flex items-center justify-center shadow-sm">
+                <Wallet className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                QieRemit Dashboard
-              </h1>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  QieRemit Dashboard
+                </h1>
+                <p className="text-xs text-gray-500 mt-0.5">Financial Management</p>
+              </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg border border-slate-700">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-mono">{formatAddress(account || '')}</span>
+              <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg border border-gray-200">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-mono text-gray-700">{formatAddress(account || '')}</span>
               </div>
               <Link
                 href="/dashboard/admin"
-                className="px-3 py-1 border border-slate-700 rounded-lg text-sm text-slate-300 hover:border-cyan-400 transition-colors"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors font-medium"
               >
                 Admin Alerts
               </Link>
               <button
                 onClick={disconnectWallet}
-                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
                 title="Disconnect"
               >
                 <LogOut className="w-5 h-5" />
@@ -324,33 +327,39 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Balance Cards */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="backdrop-blur-sm bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-700 rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-slate-400 text-sm font-medium">Native QIE Balance</h3>
+          <div className="card-elevated rounded-2xl p-6 border border-gray-200 bg-white">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wider">Native QIE Balance</h3>
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-blue-600" />
+              </div>
             </div>
-            <p className="text-3xl font-bold text-blue-400">{qieBalance}</p>
-            <p className="text-slate-500 text-sm mt-2 mb-4">QIE</p>
+            <p className="text-4xl font-bold text-gray-900 mb-2">{qieBalance}</p>
+            <p className="text-gray-500 text-sm mb-6 font-medium">QIE Native Token</p>
             <button
               onClick={() => setShowReceiveModal(true)}
-              className="w-full px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-blue-400"
+              className="w-full px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
             >
               <QrCode className="w-4 h-4" />
-              Receive
+              Receive Funds
             </button>
           </div>
 
-          <div className="backdrop-blur-sm bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-700 rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-slate-400 text-sm font-medium">QUSD Balance</h3>
+          <div className="card-elevated rounded-2xl p-6 border border-gray-200 bg-white">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wider">QUSD Balance</h3>
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-purple-600" />
+              </div>
             </div>
-            <p className="text-3xl font-bold text-cyan-400">{qusdBalance}</p>
-            <p className="text-slate-500 text-sm mt-2 mb-4">QUSD Stablecoin</p>
+            <p className="text-4xl font-bold text-gray-900 mb-2">{qusdBalance}</p>
+            <p className="text-gray-500 text-sm mb-6 font-medium">QUSD Stablecoin</p>
             <button
               onClick={() => setShowReceiveModal(true)}
-              className="w-full px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-cyan-400"
+              className="w-full px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
             >
               <QrCode className="w-4 h-4" />
-              Receive
+              Receive Funds
             </button>
           </div>
         </div>
@@ -366,48 +375,59 @@ export default function DashboardPage() {
         </div>
 
         {/* KYC Section */}
-        <div className="backdrop-blur-sm bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-6">
+        <div className="card-elevated rounded-2xl p-6 mb-6 border border-gray-200 bg-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold">KYC Verification</h3>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">KYC Verification</h3>
+                <p className="text-sm text-gray-500">Verify your identity to unlock full features</p>
+              </div>
               {isKycVerified && (
-                <div className="flex items-center gap-1 px-3 py-1 bg-green-500/20 border border-green-500/50 rounded-full">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-xs text-green-400 font-medium">Verified</span>
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-green-50 border border-green-200 rounded-full">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-xs text-green-700 font-semibold">Verified</span>
                 </div>
               )}
             </div>
             <button
               onClick={handleKYC}
               disabled={isLoadingKyc || isKycVerified}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+              className="px-6 py-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:shadow-none"
             >
-              {isLoadingKyc ? 'Processing...' : isKycVerified ? 'Already Verified' : 'KYC Me'}
+              {isLoadingKyc ? 'Processing...' : isKycVerified ? 'Verified' : 'Verify Identity'}
             </button>
           </div>
         </div>
 
         {/* Swap Section */}
-        <div className="backdrop-blur-sm bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <ArrowRightLeft className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-lg font-semibold">Swap QIE for QUSD</h3>
+        <div className="card-elevated rounded-2xl p-6 mb-6 border border-gray-200 bg-white">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Swap QIE for QUSD</h3>
+              <p className="text-sm text-gray-500">Exchange your native tokens instantly</p>
+            </div>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Amount (QIE)</label>
+              <label className="block text-sm text-gray-700 font-semibold mb-2">Amount (QIE)</label>
               <input
                 type="number"
                 value={swapAmount}
                 onChange={(e) => setSwapAmount(e.target.value)}
                 placeholder="0.0"
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium transition-all"
               />
             </div>
             <button
               onClick={handleSwap}
               disabled={isLoadingSwap || !swapAmount}
-              className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed rounded-lg font-semibold transition-all"
+              className="w-full px-4 py-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:shadow-none"
             >
               {isLoadingSwap ? 'Swapping...' : 'Swap QIE → QUSD'}
             </button>
@@ -415,39 +435,44 @@ export default function DashboardPage() {
         </div>
 
         {/* Send Globally Section */}
-        <div className="backdrop-blur-sm bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Send className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-lg font-semibold">Send Globally</h3>
+        <div className="card-elevated rounded-2xl p-6 border border-gray-200 bg-white">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+              <Send className="w-6 h-6 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Send Globally</h3>
+              <p className="text-sm text-gray-500">Cross-border transfers made simple</p>
+            </div>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Recipient Address</label>
+              <label className="block text-sm text-gray-700 font-semibold mb-2">Recipient Address</label>
               <input
                 type="text"
                 value={recipientAddress}
                 onChange={(e) => setRecipientAddress(e.target.value)}
                 placeholder="0x..."
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white font-mono text-sm"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-mono text-sm transition-all"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Amount (QUSD)</label>
+                <label className="block text-sm text-gray-700 font-semibold mb-2">Amount (QUSD)</label>
                 <input
                   type="number"
                   value={sendAmount}
                   onChange={(e) => setSendAmount(e.target.value)}
                   placeholder="0.0"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Target Currency</label>
+                <label className="block text-sm text-gray-700 font-semibold mb-2">Target Currency</label>
                 <select
                   value={targetCurrency}
                   onChange={(e) => setTargetCurrency(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium transition-all"
                 >
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
@@ -460,7 +485,7 @@ export default function DashboardPage() {
             <button
               onClick={handleSend}
               disabled={isLoadingSend || !sendAmount || !recipientAddress}
-              className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed rounded-lg font-semibold transition-all"
+              className="w-full px-4 py-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:shadow-none"
             >
               {isLoadingSend ? 'Processing...' : 'Execute Transfer'}
             </button>
@@ -468,46 +493,51 @@ export default function DashboardPage() {
         </div>
 
         {/* Risk Monitor */}
-        <div className="backdrop-blur-sm bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg font-semibold">Real-time Risk Monitor</p>
-              <p className="text-sm text-slate-400">
-                {isDetectingAnomaly
-                  ? 'Analyzing the latest transaction...'
-                  : lastAnomaly
-                  ? `Last verdict: ${lastAnomaly.verdict}`
-                  : 'Submit a swap or transfer to trigger the risk engine.'}
-              </p>
+        <div className="card-elevated rounded-2xl p-6 mb-6 border border-gray-200 bg-white">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-gray-900">Real-time Risk Monitor</p>
+                <p className="text-sm text-gray-600">
+                  {isDetectingAnomaly
+                    ? 'Analyzing the latest transaction...'
+                    : lastAnomaly
+                    ? `Last verdict: ${lastAnomaly.verdict}`
+                    : 'Submit a swap or transfer to trigger the risk engine.'}
+                </p>
+              </div>
             </div>
             {lastAnomaly ? (
               <AnomalyBadge verdict={lastAnomaly.verdict} showScore={lastAnomaly.score} />
             ) : (
-              <span className="text-xs uppercase text-slate-500">idle</span>
+              <span className="text-xs uppercase text-gray-400 font-semibold">idle</span>
             )}
           </div>
           <div className="mt-4">
             {isDetectingAnomaly ? (
-              <div className="flex items-center gap-2 text-sm text-slate-300">
-                <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <Loader2 className="w-4 h-4 text-orange-600 animate-spin" />
                 Processing anomaly signals...
               </div>
             ) : lastAnomaly ? (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-gray-600">
                 {lastAnomaly.verdict === 'ANOMALY'
                   ? 'Confirmed risky behavior. Review the reasons below before proceeding.'
                   : 'Suspicious activity detected. Proceed with caution.'}
               </p>
             ) : (
-              <p className="text-sm text-slate-400">No anomalies traced yet.</p>
+              <p className="text-sm text-gray-500">No anomalies traced yet.</p>
             )}
 
             {lastAnomaly?.reasons?.length ? (
-              <ul className="mt-3 grid gap-2 text-xs text-slate-300">
+              <ul className="mt-3 grid gap-2 text-xs">
                 {lastAnomaly.reasons.map((reason, index) => (
                   <li
                     key={`${reason}-${index}`}
-                    className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-1"
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-700"
                   >
                     {reason}
                   </li>

@@ -96,37 +96,42 @@ export default function PrivacySettings() {
 
   return (
     <>
-      <div className="backdrop-blur-sm bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
+      <div className="card-elevated rounded-2xl p-6 border border-gray-200 bg-white">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+            <Shield className="w-6 h-6 text-blue-600" />
           </div>
-          <h3 className="text-lg font-semibold">Data Privacy & Rights (GDPR/DPDP)</h3>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Data Privacy & Rights (GDPR/DPDP)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Manage your personal data</p>
+          </div>
         </div>
 
         <div className="space-y-4">
-          <p className="text-slate-400 text-sm mb-6">
+          <p className="text-gray-600 text-sm mb-6 leading-relaxed">
             You have the right to access, export, and delete your personal data stored in our 
             off-chain database. On-chain transactions on the Qie blockchain are immutable and 
             cannot be deleted.
           </p>
 
           {/* Export Data Section */}
-          <div className="border border-slate-700 rounded-lg p-4">
+          <div className="border-2 border-gray-200 rounded-xl p-4 bg-gray-50">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Download className="w-5 h-5 text-cyan-400" />
-                <h4 className="font-medium">Export Your Data</h4>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Download className="w-5 h-5 text-blue-600" />
+                </div>
+                <h4 className="font-bold text-gray-900">Export Your Data</h4>
               </div>
             </div>
-            <p className="text-slate-400 text-sm mb-4">
+            <p className="text-gray-600 text-sm mb-4">
               Download a JSON file containing all your off-chain data (wallet address, KYC status, 
               consent records, timestamps).
             </p>
             <button
               onClick={handleExportData}
               disabled={isExporting || !account}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="px-6 py-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
             >
               {isExporting ? (
                 <>
