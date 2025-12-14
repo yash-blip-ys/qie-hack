@@ -1,111 +1,68 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
-import { useWeb3 } from '@/contexts/Web3Provider';
-import { formatAddress } from '@/lib/web3';
-import { toast } from 'react-hot-toast';
-import dynamic from 'next/dynamic';
-
-// Dynamically import QR code to avoid SSR issues
-const QRCodeSVG = dynamic(
-  () => import('qrcode.react').then((mod) => mod.QRCodeSVG),
-  { ssr: false }
-);
+import QRCode from 'react-qr-code'; // <--- UPDATED IMPORT
 
 interface ReceiveModalProps {
   isOpen: boolean;
   onClose: () => void;
+  walletAddress: string;
 }
 
-export default function ReceiveModal({ isOpen, onClose }: ReceiveModalProps) {
-  const { account } = useWeb3();
+export default function ReceiveModal({ isOpen, onClose, walletAddress }: ReceiveModalProps) {
   const [copied, setCopied] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  if (!isOpen) return null;
 
-  if (!isOpen || !account) return null;
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(account);
-      setCopied(true);
-      toast.success('Address copied to clipboard!');
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast.error('Failed to copy address');
-    }
+  const handleCopy = () => {
+    navigator.clipboard.writeText(walletAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full shadow-2xl relative">
-        <button
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl p-6 relative shadow-2xl">
+        <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-          aria-label="Close"
+          className="absolute right-4 top-4 p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold mb-2 text-gray-900">
-            Receive Funds
-          </h2>
-          <p className="text-gray-600 text-sm">
-            Share this address to receive QIE or QUSD
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl mb-6 flex items-center justify-center min-h-[200px]">
-          {mounted && account ? (
-            <QRCodeSVG
-              value={account}
-              size={200}
-              level="M"
-              includeMargin={true}
-              fgColor="#0f172a"
-              bgColor="#ffffff"
-            />
-          ) : (
-            <div className="w-[200px] h-[200px] bg-slate-200 animate-pulse rounded"></div>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 border-2 border-gray-200 rounded-xl">
-            <p className="text-xs text-gray-500 mb-2 font-semibold">Your Wallet Address</p>
-            <p className="font-mono text-sm text-gray-900 break-all">{account}</p>
+        <div className="text-center space-y-6">
+          <div>
+            <h3 className="text-xl font-bold text-white">Receive Funds</h3>
+            <p className="text-slate-400 text-sm">Scan to send QIE or QUSD</p>
           </div>
 
-          <button
-            onClick={handleCopy}
-            className="w-full px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
-          >
-            {copied ? (
-              <>
-                <Check className="w-5 h-5" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="w-5 h-5" />
-                Copy Address
-              </>
-            )}
-          </button>
-        </div>
+          <div className="bg-white p-4 rounded-2xl w-fit mx-auto">
+            <QRCode 
+              value={walletAddress || ''} 
+              size={200}
+              viewBox={`0 0 256 256`}
+              style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+            />
+          </div>
 
-        <div className="mt-6 pt-6 border-t border-slate-700">
-          <p className="text-xs text-slate-500 text-center">
-            Only send QIE or QUSD tokens to this address. Sending other tokens may result in permanent loss.
-          </p>
+          <div className="space-y-2">
+            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Your Wallet Address</p>
+            <div 
+              onClick={handleCopy}
+              className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between cursor-pointer hover:border-blue-500/50 transition group"
+            >
+              <code className="text-sm text-slate-300 truncate mr-2 font-mono">
+                {walletAddress}
+              </code>
+              <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition text-slate-400">
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </div>
+            </div>
+            {copied && <p className="text-xs text-green-400 font-medium">Copied to clipboard!</p>}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
