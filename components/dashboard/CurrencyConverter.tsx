@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWeb3 } from '@/contexts/Web3Provider';
 import { ethers } from 'ethers';
-import { TrendingUp, Zap } from 'lucide-react';
+import { TrendingUp, RefreshCw } from 'lucide-react';
 import { getRpcUrl } from '@/config';
 import { MOCK_ORACLE_ABI, formatOraclePrice } from '@/lib/oracles';
 
@@ -23,7 +23,6 @@ export default function CurrencyConverter() {
   const [toCurrency, setToCurrency] = useState<string>('EUR');
   const [convertedAmount, setConvertedAmount] = useState<string>('0.92');
   const [oraclePrice, setOraclePrice] = useState<number>(1);
-  const [isPulsing, setIsPulsing] = useState(false);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
 
   useEffect(() => {
@@ -74,107 +73,55 @@ export default function CurrencyConverter() {
     const liveRate = oraclePrice * multiplier;
     const result = (amount * liveRate).toFixed(2);
     setConvertedAmount(result);
-
-    setIsPulsing(true);
-    const timer = setTimeout(() => setIsPulsing(false), 500);
-    return () => clearTimeout(timer);
   }, [fromAmount, toCurrency, oraclePrice]);
 
   const multiplier = FIAT_MULTIPLIERS[toCurrency] ?? 1;
   const currentRate = oraclePrice * multiplier;
 
   return (
-    <div className="card-elevated rounded-2xl p-6 border border-gray-200 bg-white">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-          <TrendingUp className="w-6 h-6 text-green-600" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold text-gray-900">Currency Converter</h3>
-          <p className="text-xs text-gray-500">Live exchange rates</p>
-        </div>
-      </div>
-
+    <div>
+      <h3 className="text-gray-400 font-medium mb-4 flex items-center gap-2">
+        <TrendingUp className="w-4 h-4" /> Live Rates
+        {isFetchingRate && <RefreshCw className="w-3 h-3 animate-spin ml-auto" />}
+      </h3>
+      
       <div className="space-y-4">
-        <div
-          className={`flex items-center gap-3 px-4 py-3 bg-green-50 border-2 border-green-200 rounded-xl transition-all ${
-            isPulsing ? 'animate-pulse shadow-md' : ''
-          }`}
-        >
-          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-            <Zap className="w-4 h-4 text-green-600" />
-          </div>
-          <div className="flex-1">
-            <span className="text-xs font-semibold text-gray-600 block">Live Rate</span>
-            <span className="text-sm font-bold text-gray-900">
-              1 QUSD = {currentRate.toFixed(2)} {toCurrency}
-            </span>
-          </div>
-          {isFetchingRate && (
-            <span className="text-[10px] text-gray-500 animate-pulse">Updating…</span>
-          )}
+        <div className="relative">
+          <label className="text-xs text-gray-500 mb-1 block">QIE Amount</label>
+          <input 
+            type="number" 
+            value={fromAmount}
+            onChange={(e) => setFromAmount(e.target.value)}
+            className="w-full bg-gray-900/50 border border-gray-800 rounded-xl px-4 py-3 text-white font-mono focus:border-cyan-500/50 focus:outline-none transition-colors"
+          />
         </div>
 
-        <div>
-          <label className="block text-sm text-gray-700 font-semibold mb-2">From</label>
-          <div className="relative">
-            <input
-              type="number"
-              value={fromAmount}
-              onChange={(e) => setFromAmount(e.target.value)}
-              placeholder="0.00"
-              className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 pr-20 font-medium transition-all"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <span className="text-gray-600 font-semibold">QUSD</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-center">
-          <div className="w-10 h-10 bg-gray-100 border-2 border-gray-200 rounded-full flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-700 font-semibold mb-2">To</label>
-          <div className="relative">
-            <input
-              type="text"
+        <div className="relative">
+          <label className="text-xs text-gray-500 mb-1 block">Converted To</label>
+          <div className="flex gap-2">
+            <input 
+              type="text" 
               value={convertedAmount}
               readOnly
-              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 pr-24 font-bold"
+              className="flex-1 bg-gray-900/50 border border-gray-800 rounded-xl px-4 py-3 text-cyan-400 font-mono font-bold"
             />
-            <select
+            <select 
               value={toCurrency}
               onChange={(e) => setToCurrency(e.target.value)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white border-2 border-gray-200 rounded-lg px-3 py-1.5 text-gray-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+              className="bg-gray-800 border border-gray-700 rounded-xl px-3 text-white focus:outline-none cursor-pointer"
             >
-              <option value="EUR">EUR</option>
-              <option value="INR">INR</option>
-              <option value="GBP">GBP</option>
-              <option value="USD">USD</option>
-              <option value="JPY">JPY</option>
+              {Object.keys(FIAT_MULTIPLIERS).map((curr) => (
+                <option key={curr} value={curr}>{curr}</option>
+              ))}
             </select>
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500 leading-relaxed">
-            Rates are pulled from a mock QIE oracle and recomputed every 30 seconds. Use this as a judge-friendly simulation of how
-            real FX data will connect into cross-border payouts.
-          </p>
+        <div className="text-xs text-gray-500 flex justify-between pt-2 border-t border-gray-800/50">
+          <span>Current Rate:</span>
+          <span className="font-mono text-cyan-400">1 QIE = {currentRate.toFixed(4)} {toCurrency}</span>
         </div>
       </div>
     </div>
   );
 }
-

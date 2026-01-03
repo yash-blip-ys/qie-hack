@@ -59,11 +59,11 @@ async function persistSwap(
   depositor: string,
   amountQIE: bigint,
   amountQUSD: bigint,
-  log: ethers.EventLog
+  log: ethers.EventLog,
+  provider: ethers.JsonRpcProvider | ethers.WebSocketProvider | null
 ) {
-  const provider = log.runner?.provider || log.provider;
   let timestamp = Math.floor(Date.now() / 1000);
-  if (provider && 'getBlock' in provider) {
+  if (provider && typeof (provider as any).getBlock === 'function') {
     const block = await provider.getBlock(log.blockNumber);
     timestamp = block?.timestamp ?? timestamp;
   }
@@ -156,7 +156,7 @@ async function main() {
   );
 
   contract.on('NativeDeposited', async (depositor, amountQIE, amountQUSD, event) => {
-    await persistSwap(depositor, amountQIE, amountQUSD, event);
+    await persistSwap(depositor, amountQIE, amountQUSD, event, provider);
   });
 
   const redisClient = getRedisClient();

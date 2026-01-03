@@ -17,6 +17,12 @@ export const TREASURY_ABI = [
   "event NativeDeposited(address indexed depositor, uint256 amountQIE, uint256 amountQUSD)",
 ];
 
+export const ORACLE_ABI = [
+  "function getPrice() view returns (int256)",
+  "function setPrice(uint256 newPrice)",
+  "event PriceUpdated(int256 indexed newPrice, uint256 timestamp)"
+];
+
 export function getProvider() {
   if (typeof window !== 'undefined' && window.ethereum) {
     return new ethers.BrowserProvider(window.ethereum);

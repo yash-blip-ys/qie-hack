@@ -7,7 +7,7 @@ import { getRpcUrl, getChainId } from '@/config';
 interface SyncOptions {
   fromBlock?: number;
   toBlock?: number;
-  provider?: ethers.JsonRpcProvider;
+  provider?: ethers.JsonRpcProvider | ethers.WebSocketProvider;
 }
 
 const TREASURY_ADDRESS =
@@ -17,7 +17,7 @@ const START_BLOCK = process.env.CROSS_BORDER_START_BLOCK
   ? parseInt(process.env.CROSS_BORDER_START_BLOCK, 10)
   : undefined;
 
-function getProvider(existing?: ethers.JsonRpcProvider) {
+function getProvider(existing?: ethers.JsonRpcProvider | ethers.WebSocketProvider) {
   if (existing) return existing;
   if (!RPC_URL) {
     throw new Error('QIE RPC URL is not configured. Please set it via config.json or .env.');
@@ -75,8 +75,9 @@ export async function syncTreasuryEvents(options: SyncOptions = {}) {
   const chainId = getChainId();
 
   for (const event of crossBorderEvents) {
-    if (!event.args) continue;
-    const [sender, recipient, amountQUSD, targetCurrency, timestamp] = event.args;
+    const e: any = event as any;
+    if (!e.args) continue;
+    const [sender, recipient, amountQUSD, targetCurrency, timestamp] = e.args;
     operations.push({
       updateOne: {
         filter: { txHash: event.transactionHash },
@@ -99,8 +100,9 @@ export async function syncTreasuryEvents(options: SyncOptions = {}) {
   }
 
   for (const event of swapEvents) {
-    if (!event.args) continue;
-    const [depositor, amountQIE, amountQUSD] = event.args;
+    const e: any = event as any;
+    if (!e.args) continue;
+    const [depositor, amountQIE, amountQUSD] = e.args;
     operations.push({
       updateOne: {
         filter: { txHash: event.transactionHash },

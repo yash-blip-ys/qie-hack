@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
-import QRCode from 'react-qr-code'; // <--- UPDATED IMPORT
+import QRCode from 'react-qr-code';
 
 interface ReceiveModalProps {
   isOpen: boolean;

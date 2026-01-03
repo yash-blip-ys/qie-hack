@@ -12,13 +12,19 @@
     "deploy:qusd": "hardhat run scripts/deploy-qusd.js",
     "deploy:treasury": "hardhat run scripts/deploy-treasury.js",
     "listener": "tsx scripts/cross-border-listener.ts",
-    "mock:oracle": "tsx scripts/mock-update-oracle.ts"
+    "mock:oracle": "tsx scripts/mock-update-oracle.ts",
+    "oracle:service": "hardhat run scripts/oracle-feeder.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@openzeppelin/contracts": "^5.4.0",
+    "@tanstack/react-table": "^8.21.3",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "cobe": "^0.6.5",
     "dotenv": "^17.2.3",
     "ethers": "^6.13.2",
+    "framer-motion": "^12.23.26",
     "ioredis": "^5.8.2",
     "lucide-react": "^0.427.0",
     "mongoose": "^8.5.1",
@@ -28,7 +34,8 @@
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
     "react-icons": "^5.5.0",
-    "react-qr-code": "^2.0.18"
+    "react-qr-code": "^2.0.18",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",

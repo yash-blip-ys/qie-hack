@@ -65,21 +65,24 @@ export default function ConsentBanner() {
   if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-2xl p-6">
-          <div className="flex items-start gap-4">
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
+      <div className="max-w-4xl mx-auto">
+        <div className="glass-card border border-cyan-500/20 rounded-2xl shadow-2xl p-6 relative overflow-hidden">
+          {/* Background Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/10 to-violet-900/10 -z-10" />
+
+          <div className="flex items-start gap-5">
             <div className="flex-shrink-0">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Shield className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-cyan-900/20 border border-cyan-500/30 rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-cyan-400" />
               </div>
             </div>
             
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">
+              <h3 className="text-lg font-bold text-white mb-2">
                 Privacy & Cookie Consent
               </h3>
-              <p className="text-gray-600 text-sm mb-4 leading-relaxed">
+              <p className="text-gray-300 text-sm mb-4 leading-relaxed max-w-2xl">
                 We use cookies and store your wallet address for compliance and security purposes. 
                 By continuing, you agree to our Privacy Policy and Terms of Service. 
                 Your data is protected under GDPR and DPDP regulations.
@@ -88,37 +91,18 @@ export default function ConsentBanner() {
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={handleAccept}
-                  className="px-6 py-2.5 bg-gray-900 hover:bg-gray-800 rounded-xl font-semibold text-white transition-all shadow-sm hover:shadow-md"
+                  className="px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl font-bold text-white transition-all shadow-lg shadow-cyan-900/20"
                 >
-                  Accept
+                  Accept & Continue
                 </button>
                 <button
                   onClick={handleDecline}
-                  className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 transition-all"
+                  className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl font-semibold text-gray-300 transition-all"
                 >
                   Decline
                 </button>
-                <a
-                  href="#"
-                  className="px-6 py-2.5 text-gray-600 hover:text-gray-900 text-sm underline font-medium"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // You can add a privacy policy page later
-                    toast.info('Privacy Policy page coming soon');
-                  }}
-                >
-                  Learn More
-                </a>
               </div>
             </div>
-            
-            <button
-              onClick={() => setShowBanner(false)}
-              className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-              aria-label="Close banner"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </div>

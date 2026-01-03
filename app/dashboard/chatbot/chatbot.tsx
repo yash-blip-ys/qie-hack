@@ -351,7 +351,7 @@ You are QieRemit Assistant, an AI helper for QieRemit, a blockchain-based remitt
       {/* Chatbot button (always visible) */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300"
+        className="fixed bottom-6 right-6 z-50 bg-cyan-500 text-black p-3 rounded-full shadow-lg hover:bg-cyan-400 transition-all duration-300"
         aria-label="Open chat"
       >
         <FiMessageSquare size={24} />
@@ -359,18 +359,18 @@ You are QieRemit Assistant, an AI helper for QieRemit, a blockchain-based remitt
 
       {/* Chatbot modal */}
       {isOpen && (
-        <div className="fixed bottom-20 right-6 z-50 w-80 h-[400px] bg-white rounded-lg shadow-xl flex flex-col border border-gray-200">
+        <div className="fixed bottom-20 right-6 z-50 w-80 h-[400px] glass-card rounded-xl flex flex-col border border-white/10 overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white p-4 rounded-t-lg flex justify-between items-center">
+          <div className="bg-white/5 border-b border-white/10 p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center text-cyan-400">
                 🤖
               </div>
-              <h3 className="font-semibold">QieRemit Assistant</h3>
+              <h3 className="font-semibold text-white">QieRemit Assistant</h3>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-white hover:text-gray-200 transition"
+              className="text-gray-400 hover:text-white transition"
               aria-label="Close chat"
             >
               <FiX size={20} />
@@ -378,16 +378,16 @@ You are QieRemit Assistant, an AI helper for QieRemit, a blockchain-based remitt
           </div>
 
           {/* Messages container */}
-          <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+          <div className="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-4">
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`mb-3 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] p-3 rounded-lg ${msg.sender === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-none'
-                      : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                  className={`max-w-[80%] p-3 rounded-xl text-sm ${msg.sender === 'user'
+                      ? 'bg-cyan-500 text-black font-medium rounded-br-none'
+                      : 'bg-white/10 text-gray-100 rounded-bl-none border border-white/5'
                     }`}
                 >
                   {msg.text.split('\n').map((line, i) => (
@@ -398,13 +398,11 @@ You are QieRemit Assistant, an AI helper for QieRemit, a blockchain-based remitt
             ))}
 
             {(isTyping || isGeminiLoading) && (
-              <div className="flex justify-start mb-3">
-                <div className="bg-gray-200 text-gray-800 p-3 rounded-lg rounded-bl-none">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
+              <div className="flex justify-start">
+                <div className="bg-white/10 rounded-xl rounded-bl-none px-4 py-2 flex gap-1 items-center border border-white/5">
+                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             )}
@@ -413,25 +411,27 @@ You are QieRemit Assistant, an AI helper for QieRemit, a blockchain-based remitt
           </div>
 
           {/* Input area */}
-          <div className="p-3 border-t border-gray-200 bg-white rounded-b-lg">
-            <div className="flex gap-2">
+          <div className="p-3 border-t border-white/10 bg-white/5">
+            <div className="relative flex gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ask about QieRemit..."
-                className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ask about crypto..."
+                className="w-full bg-black/20 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
+                disabled={isTyping}
               />
               <button
                 onClick={handleSend}
-                className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition"
+                disabled={!input.trim() || isTyping}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-cyan-500 text-black rounded-lg hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Send message"
               >
-                <FiSend size={20} />
+                <FiSend size={14} />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1 text-center">
+            <p className="text-xs text-gray-500 mt-2 text-center">
               Try: &ldquo;Why was my transaction blocked?&rdquo;
             </p>
           </div>

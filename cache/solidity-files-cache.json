@@ -306,8 +306,8 @@
       ]
     },
     "C:\\Users\\YUVRAJ SINGH\\OneDrive\\Desktop\\qiehack\\contracts\\QieTreasury.sol": {
-      "lastModificationDate": 1765620635052,
-      "contentHash": "fdfafdc9632cbd6302015e65de78a740",
+      "lastModificationDate": 1766931268615,
+      "contentHash": "eec049b75526475e94d2d4f1fbdddada",
       "sourceName": "contracts/QieTreasury.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -335,6 +335,7 @@
       },
       "imports": [
         "./QUSD.sol",
+        "./mocks/MockQieOracle.sol",
         "@openzeppelin/contracts/access/Ownable.sol"
       ],
       "versionPragmas": [

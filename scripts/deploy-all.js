@@ -41,22 +41,39 @@ async function main() {
   const qusdAddress = await qusd.getAddress();
   
   console.log("✅ QUSD deployed to:", qusdAddress);
-  
-  // Step 2: Deploy Treasury
+
+  // Step 2: Deploy MockQieOracle (Moved up)
   console.log("\n" + "=".repeat(50));
-  console.log("Step 2: Deploying QieTreasury");
+  console.log("Step 2: Deploying MockQieOracle (mock FX feed)");
+  console.log("=".repeat(50));
+  const MockOracle = await hre.ethers.getContractFactory("MockQieOracle");
+  const initialPrice = hre.ethers.parseUnits("1", 18); // 1 QIE = 1 USD
+  const mockOracle = await MockOracle.deploy(initialPrice, 18);
+  await mockOracle.waitForDeployment();
+  const mockOracleAddress = await mockOracle.getAddress();
+  console.log("✅ MockQieOracle deployed to:", mockOracleAddress);
+  
+  // Step 3: Deploy Treasury (Now depends on Oracle)
+  console.log("\n" + "=".repeat(50));
+  console.log("Step 3: Deploying QieTreasury");
   console.log("=".repeat(50));
   
   const QieTreasury = await hre.ethers.getContractFactory("QieTreasury");
-  const treasury = await QieTreasury.deploy(qusdAddress, deployer.address);
+  // Pass mockOracleAddress to constructor
+  const treasury = await QieTreasury.deploy(qusdAddress, mockOracleAddress, deployer.address);
   await treasury.waitForDeployment();
   const treasuryAddress = await treasury.getAddress();
   
   console.log("✅ QieTreasury deployed to:", treasuryAddress);
   
-  // Step 3: Transfer QUSD ownership
+  // Mint initial supply to deployer for testing before transferring ownership
+  const mintAmount = hre.ethers.parseEther("1000");
+  await qusd.mint(deployer.address, mintAmount);
+  console.log(`✅ Minted ${hre.ethers.formatEther(mintAmount)} QUSD to deployer for testing`);
+
+  // Step 4: Transfer QUSD ownership
   console.log("\n" + "=".repeat(50));
-  console.log("Step 3: Transferring QUSD ownership to Treasury");
+  console.log("Step 4: Transferring QUSD ownership to Treasury");
   console.log("=".repeat(50));
   
   const tx = await qusd.transferOwnership(treasuryAddress);
@@ -68,20 +85,11 @@ async function main() {
   const newOwner = await qusd.owner();
   console.log("   QUSD owner:", newOwner);
 
-  console.log("\n" + "=".repeat(50));
-  console.log("Step 4: Deploying MockQieOracle (mock FX feed)");
-  console.log("=".repeat(50));
-  const MockOracle = await hre.ethers.getContractFactory("mocks/MockQieOracle");
-  const initialPrice = hre.ethers.parseUnits("1", 18);
-  const mockOracle = await MockOracle.deploy(initialPrice, 18);
-  await mockOracle.waitForDeployment();
-  const mockOracleAddress = await mockOracle.getAddress();
-  console.log("✅ MockQieOracle deployed to:", mockOracleAddress);
-
+  // Step 5: Dex
   console.log("\n" + "=".repeat(50));
   console.log("Step 5: Simulating QIEDEX testnet swap");
   console.log("=".repeat(50));
-  const MockQieDex = await hre.ethers.getContractFactory("mocks/MockQieDex");
+  const MockQieDex = await hre.ethers.getContractFactory("MockQieDex");
   const mockDex = await MockQieDex.deploy(qusdAddress);
   await mockDex.waitForDeployment();
   const mockDexAddress = await mockDex.getAddress();
@@ -107,7 +115,7 @@ async function main() {
   console.log(`NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS=${qusdAddress}`);
   console.log(`NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS=${treasuryAddress}`);
   console.log(`NEXT_PUBLIC_MOCK_ORACLE_ADDRESS=${mockOracleAddress}`);
-  console.log(`QIEDX_PAIR=${qieDexPairAddress}`);
+  console.log(`QIEDX_PAIR=${mockDexAddress}`);
   console.log("\n✅ All contracts deployed successfully!");
 }
 
@@ -120,4 +128,3 @@ main()
     console.error(error);
     process.exit(1);
   });
-

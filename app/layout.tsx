@@ -5,6 +5,7 @@ import { Web3Provider } from "@/contexts/Web3Provider";
 import { Toaster } from "react-hot-toast";
 import ConsentBanner from "@/components/compliance/ConsentBanner";
 import Chatbot from "./dashboard/chatbot/chatbot";
+import CommandMenu from "@/components/ui/CommandMenu";
 
 const inter = Inter({ subsets: ["latin"] });
 

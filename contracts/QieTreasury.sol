@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./QUSD.sol";
+import "./mocks/MockQieOracle.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -10,10 +11,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract QieTreasury is Ownable {
     QUSD public immutable qusdToken;
+    MockQieOracle public oracle;
     
-    // Exchange rate: 1 QIE = 1 QUSD (simplified for hackathon)
-    uint256 public constant EXCHANGE_RATE = 1e18; // 1:1 ratio
-
+    // Exchange rate: Determined by Oracle
+    
     event CrossBorderFulfillmentRequested(
         address indexed sender,
         address indexed recipient,
@@ -28,18 +29,24 @@ contract QieTreasury is Ownable {
         uint256 amountQUSD
     );
 
-    constructor(address _qusdToken, address initialOwner) Ownable(initialOwner) {
+    constructor(address _qusdToken, address _oracle, address initialOwner) Ownable(initialOwner) {
         qusdToken = QUSD(_qusdToken);
+        oracle = MockQieOracle(_oracle);
     }
 
     /**
      * @notice Deposit native QIE coin and receive QUSD tokens
-     * @dev Mints QUSD at 1:1 rate with native QIE deposited
+     * @dev Mints QUSD based on Oracle rate
      */
     function depositNativeForStable() external payable {
         require(msg.value > 0, "QieTreasury: Must send QIE");
         
-        uint256 qusdAmount = msg.value; // 1:1 rate
+        int256 price = oracle.getPrice();
+        require(price > 0, "QieTreasury: Invalid oracle price");
+        
+        // Calculate QUSD amount: (amountQIE * price) / 1e18
+        // Price is assumed to be 18 decimals (e.g., 1 QIE = $1.50 => 1.5e18)
+        uint256 qusdAmount = (msg.value * uint256(price)) / 1e18;
         
         // Mint QUSD to sender
         qusdToken.mint(msg.sender, qusdAmount);

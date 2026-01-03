@@ -23,13 +23,11 @@ interface Transfer {
   recipient?: string | null;
 }
 
-export default function TransactionHistory() {
+export default function TransactionHistory({ limit }: { limit?: number }) {
   const { account } = useWeb3();
   const [transactions, setTransactions] = useState<Transfer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [anomalyMap, setAnomalyMap] = useState(() => getAnomalyStore());
 
   const fetchTransactions = useCallback(
@@ -40,7 +38,7 @@ export default function TransactionHistory() {
         const params = new URLSearchParams({
           address: account,
           page: pageToLoad.toString(),
-          limit: PAGE_SIZE.toString(),
+          limit: (limit || PAGE_SIZE).toString(),
         });
         const response = await fetch(`/api/transfers?${params.toString()}`);
         if (!response.ok) {
@@ -57,8 +55,6 @@ export default function TransactionHistory() {
           recipient: item.recipient,
         }));
         setTransactions((prev) => (append ? [...prev, ...newData] : newData));
-        setHasMore(pageToLoad < payload.pagination.pages);
-        setPage(pageToLoad);
       } catch (error: any) {
         console.error('Error loading transactions:', error);
         toast.error(error.message || 'Unable to load history');
@@ -66,7 +62,7 @@ export default function TransactionHistory() {
         setIsLoading(false);
       }
     },
-    [account]
+    [account, limit]
   );
 
   useEffect(() => {
@@ -82,11 +78,6 @@ export default function TransactionHistory() {
     const unsubscribe = subscribeToAnomalyUpdates(refresh);
     return () => unsubscribe();
   }, []);
-
-  const handleLoadMore = () => {
-    if (!hasMore || isLoading) return;
-    fetchTransactions(page + 1, true);
-  };
 
   const syncNow = async () => {
     setIsSyncing(true);
@@ -108,11 +99,11 @@ export default function TransactionHistory() {
   const getTransactionIcon = (type: TransferType) => {
     switch (type) {
       case 'cross-border':
-        return <ArrowUp className="w-5 h-5 text-red-600" />;
+        return <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20"><ArrowUp className="w-4 h-4 text-red-400" /></div>;
       case 'swap':
-        return <ArrowRightLeft className="w-5 h-5 text-blue-600" />;
+        return <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20"><ArrowRightLeft className="w-4 h-4 text-cyan-400" /></div>;
       default:
-        return <ArrowDown className="w-5 h-5 text-gray-400" />;
+        return <div className="p-2 rounded-lg bg-gray-500/10 border border-gray-500/20"><ArrowDown className="w-4 h-4 text-gray-400" /></div>;
     }
   };
 
@@ -125,132 +116,81 @@ export default function TransactionHistory() {
     return 'Swap QIE → QUSD';
   };
 
-  const formatDate = (timestamp: number) => {
-    if (!timestamp) return 'Unknown';
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const explorerBase = getExplorerUrl();
-  const getExplorerLink = (txHash: string) => {
-    return `${explorerBase.replace(/\/$/, '')}/tx/${txHash}`;
-  };
-
   const statusBadge = (status: TransferStatus) => {
-    const common = 'px-2 py-0.5 rounded-full text-xs font-semibold';
+    const common = 'px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider';
     switch (status) {
       case 'completed':
-        return <span className={`${common} bg-green-50 text-green-700 border border-green-200`}>Completed</span>;
+        return <span className={`${common} bg-green-500/10 text-green-400 border border-green-500/20`}>Success</span>;
       case 'failed':
-        return <span className={`${common} bg-red-50 text-red-700 border border-red-200`}>Failed</span>;
+        return <span className={`${common} bg-red-500/10 text-red-400 border border-red-500/20`}>Failed</span>;
       default:
-        return <span className={`${common} bg-yellow-50 text-yellow-700 border border-yellow-200`}>Pending</span>;
+        return <span className={`${common} bg-yellow-500/10 text-yellow-400 border border-yellow-500/20`}>Pending</span>;
     }
   };
 
   return (
-    <div className="card-elevated rounded-2xl p-6 border border-gray-200 bg-white">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900">Transaction History</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Your recent activity</p>
-        </div>
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs text-gray-400">Your recent activity</p>
         <button
           onClick={syncNow}
           disabled={isSyncing}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-xl text-sm text-gray-700 font-semibold transition-all disabled:opacity-50"
+          className="p-1.5 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+          title="Sync Transactions"
         >
-          <RefreshCcw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          Sync now
+          <RefreshCcw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
         </button>
       </div>
       
       {isLoading && transactions.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-gray-600 animate-spin" />
-          <span className="ml-3 text-gray-600">Loading transactions...</span>
+        <div className="flex flex-col items-center justify-center flex-1 py-8">
+          <Loader2 className="w-6 h-6 text-cyan-500 animate-spin mb-2" />
+          <span className="text-sm text-gray-500">Loading history...</span>
         </div>
       ) : transactions.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ArrowRightLeft className="w-8 h-8 text-gray-400" />
+        <div className="flex flex-col items-center justify-center flex-1 py-8 text-center">
+          <div className="w-12 h-12 bg-gray-800/50 rounded-full flex items-center justify-center mb-3">
+            <ArrowRightLeft className="w-5 h-5 text-gray-600" />
           </div>
-          <p className="text-gray-600 font-medium">No transactions found</p>
-          <p className="text-gray-500 text-sm mt-2">Your transaction history will appear here</p>
+          <p className="text-gray-400 text-sm font-medium">No transactions yet</p>
         </div>
       ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar">
           {transactions.map((tx, index) => {
             const anomalyEntry = anomalyMap[tx.txHash];
             return (
               <div
                 key={`${tx.txHash}-${index}`}
-                className="flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300"
               >
-                <div className="flex-shrink-0">
-                  {getTransactionIcon(tx.type)}
-                </div>
+                {getTransactionIcon(tx.type)}
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-sm font-medium text-gray-200 truncate pr-2">
                       {getTransactionLabel(tx)}
+                    </p>
+                    <span className="text-sm font-bold text-white font-mono whitespace-nowrap">
+                      {tx.amountQUSD} QUSD
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                       {statusBadge(tx.status)}
                       {anomalyEntry && (
-                        <span className="flex items-center">
-                          <AnomalyBadge
-                            verdict={anomalyEntry.verdict}
-                            size="sm"
-                            showScore={anomalyEntry.score}
-                          />
-                        </span>
+                        <AnomalyBadge verdict={anomalyEntry.verdict} showScore={anomalyEntry.score} size="sm" />
                       )}
-                    </p>
-                    <p
-                      className={`font-bold ${
-                        tx.type === 'swap' ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {tx.type === 'swap' ? '+' : '-'}
-                      {tx.amountQUSD} QUSD
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>{formatDate(tx.timestamp)}</span>
-                    {tx.recipient && (
-                      <>
-                        <span>•</span>
-                        <span className="font-mono">
-                          {tx.recipient.slice(0, 6)}...{tx.recipient.slice(-4)}
-                        </span>
-                      </>
-                    )}
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(tx.timestamp * 1000).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
-                <a
-                  href={getExplorerLink(tx.txHash)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0 p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-600"
-                  title="View on Explorer"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </a>
               </div>
             );
           })}
-          {hasMore && (
-            <button
-              onClick={handleLoadMore}
-              disabled={isLoading}
-              className="w-full mt-2 py-2 border-2 border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors font-semibold"
-            >
-              {isLoading ? 'Loading...' : 'Load more'}
-            </button>
-          )}
         </div>
       )}
     </div>
   );
 }
-

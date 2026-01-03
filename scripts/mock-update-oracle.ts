@@ -23,9 +23,9 @@ async function main() {
   }
 
   const decimals = Number(process.env.MOCK_ORACLE_DECIMALS || networkConfig?.oracleDecimals || DEFAULT_DECIMALS);
-  const price = hre.ethers.parseUnits(priceArg, decimals);
+  const price = (hre as any).ethers.parseUnits(priceArg, decimals);
 
-  const MockOracle = await hre.ethers.getContractFactory('MockQieOracle');
+  const MockOracle = await (hre as any).ethers.getContractFactory('MockQieOracle');
   const oracle = MockOracle.attach(oracleAddress);
   const tx = await oracle.setPrice(price);
   await tx.wait();
