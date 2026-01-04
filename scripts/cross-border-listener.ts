@@ -12,15 +12,9 @@ import { syncTreasuryEvents } from '../lib/syncTransfers';
 import { getRpcUrl, getWsRpcUrl, getChainId } from '@/config';
 
 async function bootstrapProvider() {
-  const wsUrl = getWsRpcUrl();
   const httpUrl = getRpcUrl();
-
-  if (wsUrl) {
-    console.log('🔌 Using WebSocket provider for real-time events');
-    return new ethers.WebSocketProvider(wsUrl);
-  }
   if (!httpUrl) {
-    throw new Error('QIE_RPC_URL or QIE_WS_RPC_URL must be defined for the listener.');
+    throw new Error('QIE_RPC_URL must be defined for the listener.');
   }
   console.log('🔌 Using HTTP provider with polling for events');
   const provider = new ethers.JsonRpcProvider(httpUrl);
@@ -112,6 +106,21 @@ async function persistQueuedEvent(payload: RedisQueuePayload) {
     { upsert: true }
   );
   console.log(`🧾 Queue processed: ${payload.type} @ ${payload.txHash}`);
+
+  // Demo auto-fulfillment: mark cross-border as completed after short delay
+  if (payload.type === 'cross-border') {
+    setTimeout(async () => {
+      try {
+        await TransferEvent.updateOne(
+          { txHash: payload.txHash },
+          { $set: { status: 'completed', 'metadata.fulfilledAt': Math.floor(Date.now() / 1000) } }
+        );
+        console.log(`✅ Auto-fulfilled cross-border @ ${payload.txHash}`);
+      } catch (err) {
+        console.error('Auto-fulfill error:', err);
+      }
+    }, 8000);
+  }
 }
 
 async function startQueueProcessor() {

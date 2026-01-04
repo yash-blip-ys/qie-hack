@@ -32,7 +32,7 @@ function useAdminAuth() {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { connectWallet, disconnectWallet, account, isConnected } = useWeb3();
+  const { connectWallet, disconnectWallet, account, isConnected, switchNetwork, provider } = useWeb3();
   const { authorized } = useAdminAuth();
 
   useEffect(() => {
@@ -40,6 +40,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       toast.error('Admin access required');
     }
   }, [isConnected, authorized]);
+
+  useEffect(() => {
+    const ensureNetwork = async () => {
+      if (provider && switchNetwork) {
+        const net = await provider.getNetwork();
+        if (Number(net.chainId) !== 1990) {
+          await switchNetwork(1990);
+        }
+      }
+    };
+    ensureNetwork();
+  }, [provider, switchNetwork]);
 
   if (!isConnected) {
     return (
@@ -88,6 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const nav = [
     { href: '/admin', label: 'Overview' },
+    { href: '/admin/kyc', label: 'KYC' },
     { href: '/admin/ledger', label: 'Ledger' },
     { href: '/admin/threats', label: 'Threats' },
     { href: '/admin/settings', label: 'Settings' },
@@ -138,4 +151,3 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 }
-

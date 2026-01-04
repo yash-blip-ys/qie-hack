@@ -110,25 +110,51 @@ export default function ThreatsPage() {
 
               <div className="mt-4 flex items-center gap-2">
                 <button
-                  onClick={() => window.alert('Alert dismissed')}
+                  onClick={async () => {
+                    setAlerts((prev) => prev.filter((x) => x._id !== a._id));
+                  }}
                   className={`${actBtn} bg-white/10 border-white/20 text-gray-200 hover:bg-white/20`}
                 >
                   Dismiss
                 </button>
                 <button
-                  onClick={() => window.alert('User flagged')}
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/admin/threats/flag', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wallet: a.event.wallet }),
+                      });
+                    } catch {}
+                  }}
                   className={`${actBtn} bg-orange-500/20 border-orange-500/30 text-orange-200 hover:bg-orange-500/30`}
                 >
                   Flag User
                 </button>
                 <button
-                  onClick={() => window.alert('Contract function frozen')}
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/admin/threats/freeze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wallet: a.event.wallet }),
+                      });
+                    } catch {}
+                  }}
                   className={`${actBtn} bg-red-500/20 border-red-500/30 text-red-200 hover:bg-red-500/30`}
                 >
                   Freeze Function
                 </button>
                 <button
-                  onClick={() => window.alert('Snowflake: fingerprint quarantined')}
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/admin/threats/quarantine', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wallet: a.event.wallet, fingerprint: a.event.fingerprint }),
+                      });
+                    } catch {}
+                  }}
                   className={`${actBtn} bg-cyan-500/20 border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/30 inline-flex items-center gap-1`}
                 >
                   <Snowflake className="w-3 h-3" /> Quarantine Fingerprint
@@ -141,4 +167,3 @@ export default function ThreatsPage() {
     </div>
   );
 }
-

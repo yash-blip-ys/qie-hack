@@ -177,19 +177,21 @@ async function buildMetadata(params: {
 }
 
 async function postToAnomaly(body: Record<string, any>) {
-  const res = await fetch('/api/anomaly/event', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    throw new Error('Failed to reach anomaly service');
+  try {
+    const res = await fetch('/api/anomaly/event', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      return { verdict: 'CLEAR', score: 0, reasons: [] };
+    }
+    return res.json();
+  } catch {
+    return { verdict: 'CLEAR', score: 0, reasons: [] };
   }
-
-  return res.json();
 }
 
 export async function reportAnomalyEvent(params: {

@@ -198,6 +198,63 @@ Use `docker compose down` to stop the stack, or run `npm run worker` inside the 
 - Run `npx hardhat test` to cover the treasury flow plus the mock oracle sanity checks. The suite now exercises `MockQieOracle` so you can prove the mock feeds are trustworthy.
 - Re-run `npm run listener` during local testing to ensure Redis-backed queue processing keeps the `TransferEvent` ledger aligned even if Mongo briefly goes offline.
 
+## 🛠 Mainnet Configuration & Runbook
+
+### Environment
+
+Set the following in `.env.local`:
+
+```
+NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS=<QUSD address>
+NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS=<Treasury address>
+QIE_RPC_URL=https://rpc1mainnet.qie.digital
+QIE_CHAIN_ID=1990
+QIE_EXPLORER_URL=https://mainnet.qie.digital
+DEFAULT_NETWORK=qie
+MONGODB_URI=<MongoDB Atlas URI>
+REDIS_URL=<Upstash Redis URL>
+ANOMALY_SERVICE_URL=http://localhost:4000
+```
+
+Set the following in `.env` for Node scripts:
+
+```
+MONGODB_URI=<same as above>
+REDIS_URL=<same as above>
+QIE_RPC_URL=https://rpc1mainnet.qie.digital
+QIE_CHAIN_ID=1990
+QIE_EXPLORER_URL=https://mainnet.qie.digital
+DEFAULT_NETWORK=qie
+NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS=<Treasury address>
+NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS=<QUSD address>
+```
+
+### Services
+
+- Frontend: `npm run dev`
+- Anomaly middleware: `cd anomaly-engine && npm start`
+- Cross-border listener: `npm run listener`
+- Oracle feeder: `npx tsx scripts/oracle-feeder.ts`
+
+### Admin Console
+
+- Overview `/admin`: Treasury balances, throughput, risk summary, explorer link
+- Ledger `/admin/ledger`: Transaction table with explorer links and a “Sync Now” button that triggers `/api/transfers` POST to backfill events from chain
+
+## ✅ KYC Enforcement
+
+- New users must complete KYC before using Swap or Global Send
+- The Dashboard shows an “Identity Verification” card linking to Blockpass:
+  - `https://verify-with.blockpass.org/?clientId=financial_app_00065`
+- The UI disables Swap and Send, shows a banner, and enforces checks in handlers until KYC is verified
+- Verification status is read via `/api/user?address=<wallet>`; after success, `POST /api/user` with `{ walletAddress }` marks `isKycVerified=true`
+
+## 🔎 Troubleshooting
+
+- Explorer links not opening: verify `QIE_EXPLORER_URL` and contract addresses
+- Admin not updating: ensure anomaly middleware and listener are running, then use “Sync Now”
+- Wallet balances not reading: confirm wallet switched to QIE chain (1990) in MetaMask
+
 ## 🎬 Demo & Judges' Guide
 
 - See `DEMOS.md` for the recommended Loom flow (wallet connect, mock oracle tuning, cross-border swap, queue output, and QIEDEX simulation). Follow the checklist to narrate how each component maps to the “DeFi Without Borders” story.

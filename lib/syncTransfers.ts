@@ -17,12 +17,31 @@ const START_BLOCK = process.env.CROSS_BORDER_START_BLOCK
   ? parseInt(process.env.CROSS_BORDER_START_BLOCK, 10)
   : undefined;
 
+async function probeRpc(url: string, expectedChainId: number): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const hex = data?.result;
+    if (typeof hex !== 'string') return false;
+    const got = Number.parseInt(hex, 16);
+    return got === expectedChainId;
+  } catch {
+    return false;
+  }
+}
+
 function getProvider(existing?: ethers.JsonRpcProvider | ethers.WebSocketProvider) {
   if (existing) return existing;
   if (!RPC_URL) {
     throw new Error('QIE RPC URL is not configured. Please set it via config.json or .env.');
   }
-  return new ethers.JsonRpcProvider(RPC_URL);
+  const chainId = getChainId();
+  return new ethers.JsonRpcProvider(RPC_URL, chainId);
 }
 
 export async function syncTreasuryEvents(options: SyncOptions = {}) {
@@ -31,6 +50,12 @@ export async function syncTreasuryEvents(options: SyncOptions = {}) {
   }
 
   await connectDB();
+
+  const chainId = getChainId();
+  const healthy = await probeRpc(RPC_URL, chainId);
+  if (!healthy) {
+    return { synced: 0, fromBlock: options.fromBlock ?? 0, toBlock: options.toBlock ?? 0, error: 'rpc_unreachable' };
+  }
 
   const provider = getProvider(options.provider);
   const treasuryContract = new ethers.Contract(TREASURY_ADDRESS, TREASURY_ABI, provider);
@@ -72,7 +97,6 @@ export async function syncTreasuryEvents(options: SyncOptions = {}) {
   };
 
   const operations = [];
-  const chainId = getChainId();
 
   for (const event of crossBorderEvents) {
     const e: any = event as any;

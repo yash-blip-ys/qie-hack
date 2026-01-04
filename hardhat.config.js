@@ -21,6 +21,7 @@ const qieGasLimit = Number(process.env.QIE_GAS_LIMIT || networkConfig.gasLimit |
 
 /** @type import('hardhat/config').HardhatUserConfig */
 export default {
+  defaultNetwork: selectedNetwork,
   solidity: {
     version: "0.8.20",
     settings: {

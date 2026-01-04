@@ -3,9 +3,9 @@
   "networks": {
     "qieTestnet": {
       "label": "QIE Testnet",
-      "rpcUrl": "https://rpc-main1.qie.org",
-      "wsRpcUrl": "wss://rpc-main1.qie.org/ws",
-      "explorer": "https://explorer.qie.org",
+      "rpcUrl": "https://rpc5mainnet.qie.digital",
+      "wsRpcUrl": "wss://rpc5mainnet.qie.digital/ws",
+      "explorer": "https://mainnet.qie.digital",
       "chainId": 1938,
       "gasLimit": 1000000,
       "qiedexPair": "0x0000000000000000000000000000000000000000",

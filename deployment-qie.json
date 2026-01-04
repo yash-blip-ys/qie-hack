@@ -1,0 +1,9 @@
+{
+  "network": "qie",
+  "timestamp": "2026-01-04T12:08:05.799Z",
+  "contracts": {
+    "QUSD": "0x3533913F65244F61a2091Ee2D5d341DA83513d0C",
+    "Oracle": "0x97BDdF35E036837959376f402e7e7B6B897937db",
+    "Treasury": "0x03c2c2Ff46B7484850a756B48215092ae09CDD78"
+  }
+}

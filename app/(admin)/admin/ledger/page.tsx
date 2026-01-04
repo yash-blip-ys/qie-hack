@@ -20,11 +20,18 @@ export default function AdminLedgerPage() {
   const [data, setData] = useState<TransferRow[]>([]);
   const [loading, setLoading] = useState(false);
   const explorer = useMemo(() => getExplorerUrl(), []);
+  const [lastSync, setLastSync] = useState<{ fromBlock: number; toBlock: number; synced: number } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
+        const syncRes = await fetch('/api/transfers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        if (syncRes.ok) {
+          const syncPayload = await syncRes.json();
+          setLastSync({ fromBlock: syncPayload.fromBlock, toBlock: syncPayload.toBlock, synced: syncPayload.synced });
+        }
         const [tRes, aRes] = await Promise.all([
           fetch('/api/transfers?limit=50'),
           fetch('/api/anomaly/alerts?limit=50'),
@@ -60,6 +67,19 @@ export default function AdminLedgerPage() {
     return () => clearInterval(id);
   }, []);
 
+  const handleSyncNow = async () => {
+    try {
+      setSyncing(true);
+      const res = await fetch('/api/transfers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const payload = await res.json();
+      if (res.ok) {
+        setLastSync({ fromBlock: payload.fromBlock, toBlock: payload.toBlock, synced: payload.synced });
+      }
+    } catch {
+    } finally {
+      setSyncing(false);
+    }
+  };
   const columns: ColumnDef<TransferRow>[] = [
     {
       header: 'Hash',
@@ -122,6 +142,58 @@ export default function AdminLedgerPage() {
         return <span className="text-xs text-gray-300">{new Date(ts).toLocaleString()}</span>;
       },
     },
+    {
+      header: 'Actions',
+      accessorKey: 'txHash',
+      cell: ({ row }) => {
+        const txHash = row.original.txHash;
+        const status = row.original.status;
+        const canFulfill = status === 'pending';
+        return (
+          <div className="flex items-center gap-2">
+            <a
+              className="text-xs underline text-cyan-300 hover:text-cyan-200"
+              href={`${explorer}/tx/${txHash}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View
+            </a>
+            {canFulfill && (
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/transfers/fulfill', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ txHash }),
+                    });
+                    if (res.ok) {
+                      const refreshed = await fetch('/api/transfers?limit=50');
+                      const payload = await refreshed.json();
+                      const rows: TransferRow[] = (payload.data || []).map((t: any) => ({
+                        txHash: t.txHash,
+                        status: t.status,
+                        sender: t.sender,
+                        recipient: t.recipient,
+                        amountQUSD: t.amountQUSD,
+                        timestamp: t.timestamp,
+                        type: t.type,
+                        risk: null,
+                      }));
+                      setData(rows);
+                    }
+                  } catch {}
+                }}
+                className="px-2 py-1 rounded bg-green-500/20 border border-green-500/30 text-green-200 text-[11px]"
+              >
+                Mark Completed
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
   ];
 
   const table = useReactTable({
@@ -135,6 +207,20 @@ export default function AdminLedgerPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">On-Chain Ledger</h1>
         <p className="text-sm text-gray-400">Live transaction table with optimistic UI</p>
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            onClick={handleSyncNow}
+            className="px-3 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-200 text-sm disabled:opacity-50"
+            disabled={syncing}
+          >
+            {syncing ? 'Syncing…' : 'Sync Now'}
+          </button>
+          {lastSync && (
+            <span className="text-xs text-gray-400">
+              Last Sync: {lastSync.fromBlock} → {lastSync.toBlock} ({lastSync.synced} events)
+            </span>
+          )}
+        </div>
       </div>
       <div className="glass-card rounded-2xl p-6 bg-white/5 border border-white/10">
         <div className="overflow-x-auto">

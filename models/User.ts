@@ -12,6 +12,18 @@ const UserSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  isFlagged: {
+    type: Boolean,
+    default: false,
+  },
+  isFrozen: {
+    type: Boolean,
+    default: false,
+  },
+  quarantinedFingerprints: {
+    type: [String],
+    default: [],
+  },
   kycTimestamp: {
     type: Date,
     default: Date.now,

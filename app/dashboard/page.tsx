@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/contexts/Web3Provider';
-import { formatAddress, formatBalance, parseAmount, getContract, QUSD_ABI, TREASURY_ABI } from '@/lib/web3';
+import { formatAddress, formatBalance, parseAmount, getContract, QUSD_ABI, TREASURY_ABI, ORACLE_ABI } from '@/lib/web3';
 import { Wallet, CheckCircle, ArrowRightLeft, Send, LogOut, QrCode, Loader2, Shield, RefreshCw, Copy, ExternalLink, Globe } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { reportAnomalyEvent, subscribeToAnomalyUpdates, getLastAnomalyResult, AnomalyResult } from '@/lib/anomaly';
 import ReceiveModal from '@/components/dashboard/ReceiveModal';
 import UserSecurityStatus from '@/components/dashboard/UserSecurityStatus';
+import KYCVerification from '@/components/dashboard/KYCVerification';
 import CurrencyConverter from '@/components/dashboard/CurrencyConverter';
 import PriceTicker from '@/components/dashboard/PriceTicker';
 import PrivacySettings from '@/components/dashboard/PrivacySettings';
@@ -18,16 +19,19 @@ import Chatbot from './chatbot/chatbot';
 
 const QUSD_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS || '';
 const TREASURY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS || '';
+const EXPLORER_URL = process.env.QIE_EXPLORER_URL || 'https://mainnet.qie.digital';
 
 export default function DashboardPage() {
-  const { provider, signer, account, isConnected, connectWallet, disconnectWallet } = useWeb3();
+  const { provider, signer, account, isConnected, connectWallet, disconnectWallet, switchNetwork } = useWeb3();
   const router = useRouter();
   
   const [qieBalance, setQieBalance] = useState<string>('0');
   const [qusdBalance, setQusdBalance] = useState<string>('0');
+  const [qusdDecimals, setQusdDecimals] = useState<number>(18);
   const [isKycVerified, setIsKycVerified] = useState<boolean>(false);
   const [isLoadingSwap, setIsLoadingSwap] = useState(false);
   const [isLoadingSend, setIsLoadingSend] = useState(false);
+  const [oraclePrice, setOraclePrice] = useState<number>(1.0);
   
   const [activeTab, setActiveTab] = useState<'swap' | 'send'>('swap');
   const [swapAmount, setSwapAmount] = useState('');
@@ -50,8 +54,10 @@ export default function DashboardPage() {
       // Load QUSD balance if contract address is set
       if (QUSD_CONTRACT_ADDRESS && signer) {
         const qusdContract = getContract(QUSD_CONTRACT_ADDRESS, QUSD_ABI, signer);
+        const dec = await qusdContract.decimals();
+        setQusdDecimals(Number(dec));
         const qusdBal = await qusdContract.balanceOf(account);
-        setQusdBalance(formatBalance(qusdBal));
+        setQusdBalance(formatBalance(qusdBal, Number(dec)));
       }
     } catch (error: any) {
       console.error('Error loading balances:', error);
@@ -76,9 +82,33 @@ export default function DashboardPage() {
       router.push('/');
       return;
     }
-    loadBalances();
-    loadKYCStatus();
-  }, [isConnected, router, loadBalances, loadKYCStatus]);
+
+    const verifyNetworkAndLoad = async () => {
+      if (provider && switchNetwork) {
+        const network = await provider.getNetwork();
+        if (Number(network.chainId) !== 1990) {
+          toast.loading('Switching to QIE Mainnet...', { duration: 3000 });
+          await switchNetwork(1990);
+        } else {
+          loadBalances();
+          loadKYCStatus();
+          try {
+            const oracleAddr = process.env.NEXT_PUBLIC_MOCK_ORACLE_ADDRESS || '';
+            if (oracleAddr && signer) {
+              const oracle = getContract(oracleAddr, ORACLE_ABI, signer);
+              const priceRaw = await oracle.getPrice();
+              const price = Number(formatBalance(priceRaw)); // price is 18-decimal fixed
+              if (!Number.isNaN(price) && price > 0) {
+                setOraclePrice(price);
+              }
+            }
+          } catch {}
+        }
+      }
+    };
+
+    verifyNetworkAndLoad();
+  }, [isConnected, router, provider, switchNetwork, loadBalances, loadKYCStatus, signer]);
 
   useEffect(() => {
     const stored = getLastAnomalyResult();
@@ -106,6 +136,10 @@ export default function DashboardPage() {
   };
 
   const handleSwap = async () => {
+    if (!isKycVerified) {
+      toast.error('Please complete KYC before transacting');
+      return;
+    }
     if (!swapAmount || parseFloat(swapAmount) <= 0) {
       toast.error('Enter a valid amount');
       return;
@@ -135,6 +169,7 @@ export default function DashboardPage() {
       
       toast.loading('Swapping QIE to QUSD...', { id: 'swap-toast' });
       await tx.wait();
+      await fetch('/api/transfers', { method: 'POST' });
       toast.success('Swap successful!', { id: 'swap-toast' });
       
       setSwapAmount('');
@@ -149,6 +184,10 @@ export default function DashboardPage() {
   };
 
   const handleSend = async () => {
+    if (!isKycVerified) {
+      toast.error('Please complete KYC before transacting');
+      return;
+    }
     if (!sendAmount || !recipientAddress) {
       toast.error('Please fill all fields');
       return;
@@ -173,7 +212,7 @@ export default function DashboardPage() {
       const treasuryContract = getContract(TREASURY_CONTRACT_ADDRESS, TREASURY_ABI, signer);
       const qusdContract = getContract(QUSD_CONTRACT_ADDRESS, QUSD_ABI, signer);
 
-      const amountWei = parseAmount(sendAmount);
+      const amountWei = parseAmount(sendAmount, qusdDecimals);
       
       // Standard ERC20 approve
       const approveTx = await qusdContract.approve(TREASURY_CONTRACT_ADDRESS, amountWei);
@@ -188,8 +227,21 @@ export default function DashboardPage() {
       );
 
       toast.loading('Processing Transfer...', { id: 'send-toast' });
-      await tx.wait();
-      toast.success('Transfer initiated!', { id: 'send-toast' });
+      const receipt = await tx.wait();
+      await fetch('/api/transfers', { method: 'POST' });
+      const txHash = tx.hash || receipt?.hash;
+      toast.success(
+        txHash
+          ? `Transfer initiated: ${EXPLORER_URL}/tx/${txHash}`
+          : 'Transfer initiated!',
+        { id: 'send-toast' }
+      );
+
+      try {
+        const recipientBal = await qusdContract.balanceOf(recipientAddress);
+        const formatted = formatBalance(recipientBal);
+        toast.success(`Recipient QUSD balance: ${formatted}`);
+      } catch {}
 
       setSendAmount('');
       setRecipientAddress('');
@@ -253,6 +305,25 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {!isKycVerified && (
+          <div className="glass-card rounded-2xl p-4 mb-8 border border-yellow-500/20 bg-yellow-500/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-yellow-400" />
+              <div>
+                <p className="text-sm text-yellow-200">Identity verification required to use swap and send.</p>
+              </div>
+            </div>
+            <a
+              href="https://verify-with.blockpass.org/?clientId=financial_app_00065"
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-semibold hover:from-cyan-500 hover:to-blue-500"
+            >
+              Verify with Blockpass
+            </a>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Balances & Actions */}
@@ -342,13 +413,13 @@ export default function DashboardPage() {
                       <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex justify-between items-center">
                         <span className="text-gray-400 text-sm">You Receive (Estimated)</span>
                         <span className="text-xl font-bold text-white font-mono">
-                          {swapAmount ? (parseFloat(swapAmount) * 1.0).toFixed(2) : '0.00'} QUSD
+                          {swapAmount ? (parseFloat(swapAmount) * oraclePrice).toFixed(6) : '0.00'} QUSD
                         </span>
                       </div>
 
                       <button 
                         onClick={handleSwap}
-                        disabled={isLoadingSwap || !swapAmount}
+                        disabled={isLoadingSwap || !swapAmount || !isKycVerified}
                         className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20 transition-all"
                       >
                         {isLoadingSwap ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Swap to Stablecoin'}
@@ -417,7 +488,7 @@ export default function DashboardPage() {
 
                       <button 
                         onClick={handleSend}
-                        disabled={isLoadingSend || !sendAmount || !recipientAddress}
+                        disabled={isLoadingSend || !sendAmount || !recipientAddress || !isKycVerified}
                         className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isLoadingSend ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Global Payment'}

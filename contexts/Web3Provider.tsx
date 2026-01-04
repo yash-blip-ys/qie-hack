@@ -103,6 +103,47 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     toast.success('Wallet disconnected');
   };
 
+  const switchNetwork = async (chainId: number) => {
+    if (!window.ethereum) return;
+
+    const chainIdHex = `0x${chainId.toString(16)}`;
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: chainIdHex }],
+      });
+    } catch (switchError: any) {
+      // This error code indicates that the chain has not been added to MetaMask.
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: chainIdHex,
+                chainName: 'QIE Blockchain',
+                nativeCurrency: {
+                  name: 'QIE',
+                  symbol: 'QIE',
+                  decimals: 18,
+                },
+                rpcUrls: ['https://rpc5mainnet.qie.digital'],
+                blockExplorerUrls: ['https://mainnet.qie.digital'],
+              },
+            ],
+          });
+        } catch (addError) {
+          console.error('Error adding network:', addError);
+          toast.error('Failed to add QIE network');
+        }
+      } else {
+        console.error('Error switching network:', switchError);
+        toast.error('Failed to switch network');
+      }
+    }
+  };
+
   return (
     <Web3Context.Provider
       value={{
@@ -112,6 +153,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         isConnected,
         connectWallet,
         disconnectWallet,
+        switchNetwork,
       }}
     >
       {children}

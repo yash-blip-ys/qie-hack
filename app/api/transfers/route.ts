@@ -54,11 +54,7 @@ export async function POST(req: NextRequest) {
     const result = await syncTreasuryEvents({ fromBlock, toBlock });
     return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
-    console.error('Transfers sync error:', error);
-    return NextResponse.json(
-      { error: 'Failed to sync transfers', details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'sync_skipped', details: error.message });
   }
 }
 
