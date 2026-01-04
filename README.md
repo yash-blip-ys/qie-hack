@@ -1,3 +1,4 @@
+YOUTUBE VIDEO LINK AT THE END 
 # QieRemit - Borderless Financial App
 
 A Web3 full-stack application built for the Qie blockchain hackathon. QieRemit enables borderless financial transfers using the QUSD stablecoin.
@@ -278,4 +279,5 @@ NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS=<QUSD address>
 ## 📝 License
 
 Built for Qie Hackathon 2025
+https://youtu.be/55AGtiYUK8o
 
