@@ -279,5 +279,5 @@ NEXT_PUBLIC_QSTABLE_CONTRACT_ADDRESS=<QUSD address>
 ## 📝 License
 
 Built for Qie Hackathon 2025
-https://youtu.be/55AGtiYUK8o
+https://youtu.be/W1ehS7JrYpM
 
