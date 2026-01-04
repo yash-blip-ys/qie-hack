@@ -13,7 +13,7 @@
     "deploy:treasury": "hardhat run scripts/deploy-treasury.js",
     "listener": "tsx scripts/cross-border-listener.ts",
     "mock:oracle": "tsx scripts/mock-update-oracle.ts",
-    "oracle:service": "hardhat run scripts/oracle-feeder.ts"
+    "oracle:service": "tsx scripts/oracle-feeder.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
